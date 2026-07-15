@@ -1,6 +1,7 @@
 package bot
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -68,6 +69,14 @@ func New(cfg *config.Config) (*Bot, error) {
 
 func (b *Bot) Start() error {
 	slog.Info("bot started", "username", b.api.Self.UserName, "mode", b.cfg.BotMode)
+
+	// Persistent menu button that launches the Mini App.
+	if b.cfg.WebAppURL != "" {
+		if err := b.setWebAppMenuButton(); err != nil {
+			slog.Warn("set chat menu button", "err", err)
+		}
+	}
+
 	go b.runNotifier()
 
 	var updates tgbotapi.UpdatesChannel
@@ -545,6 +554,12 @@ func (b *Bot) showMenu(chatID int64, tgID string) {
 			{tgbotapi.NewInlineKeyboardButtonData("💬 Связь с тренером", "contact")},
 		}
 	}
+	if b.cfg.WebAppURL != "" {
+		rows = append(rows, []tgbotapi.InlineKeyboardButton{
+			tgbotapi.NewInlineKeyboardButtonURL("📲 Открыть приложение", b.cfg.WebAppURL),
+		})
+	}
+
 	kb := tgbotapi.NewInlineKeyboardMarkup(rows...)
 	b.sendWithKeyboard(chatID, "Главное меню:", kb)
 }
@@ -803,4 +818,31 @@ func (b *Bot) sendWithKeyboard(chatID int64, text string, kb tgbotapi.InlineKeyb
 	msg := tgbotapi.NewMessage(chatID, text)
 	msg.ReplyMarkup = kb
 	_, _ = b.api.Send(msg)
+}
+
+// setWebAppMenuButton installs a persistent chat menu button that opens the Mini App.
+// The bundled telegram-bot-api version predates MenuButton helpers, so we call the
+// Bot API directly.
+func (b *Bot) setWebAppMenuButton() error {
+	base := b.cfg.BotAPIBaseURL
+	if base == "" {
+		base = tgbotapi.APIEndpoint
+	} else {
+		base = strings.TrimRight(base, "/") + "/bot%s/%s"
+	}
+	url := fmt.Sprintf(base, b.cfg.BotToken, "setChatMenuButton")
+
+	body, _ := json.Marshal(map[string]any{
+		"menu_button": map[string]any{
+			"type":    "web_app",
+			"text":    "📲 Приложение",
+			"web_app": map[string]any{"url": b.cfg.WebAppURL},
+		},
+	})
+	resp, err := http.Post(url, "application/json", bytes.NewReader(body))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	return nil
 }

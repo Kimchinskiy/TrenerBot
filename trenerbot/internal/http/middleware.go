@@ -131,6 +131,9 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		authTelegram(svc, w, r)
 	}))
 
+	// Telegram Mini App login: validated via initData signature, then a JWT is issued.
+	r.Post("/api/auth/telegram-webapp", webAppLogin(svc, cfg))
+
 	r.Route("/api", func(r chi.Router) {
 		r.Use(AuthMiddleware(svc, cfg))
 

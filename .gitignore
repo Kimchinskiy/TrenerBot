@@ -1,0 +1,13 @@
+# Build artifacts
+bin/
+*.exe~
+dist/
+
+# Go build cache
+.gocache/
+
+# Node
+node_modules/
+
+# Kilo internal
+.kilo/

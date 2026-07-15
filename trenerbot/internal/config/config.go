@@ -23,6 +23,9 @@ type Config struct {
 	WebhookSecret  string
 	BotAPIBaseURL  string // optional custom TG API base
 
+	// Telegram Mini App
+	WebAppURL string // public base URL of the Mini App (e.g. https://app.example.com)
+
 	// Scheduler
 	SchedulerInterval time.Duration
 
@@ -44,6 +47,8 @@ func Load() (*Config, error) {
 		WebhookURL:    getEnv("WEBHOOK_URL", ""),
 		WebhookSecret: getEnv("WEBHOOK_SECRET", ""),
 		BotAPIBaseURL: getEnv("BOT_API_BASE_URL", ""),
+
+		WebAppURL: getEnv("WEBAPP_URL", ""),
 
 		SchedulerInterval: getEnvDuration("SCHEDULER_INTERVAL", 30*time.Second),
 		APIBaseURL:        getEnv("API_BASE_URL", "http://localhost:8080"),
