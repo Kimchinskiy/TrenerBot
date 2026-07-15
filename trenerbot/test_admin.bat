@@ -1,0 +1,2 @@
+@echo off
+curl.exe -X POST -H "X-Service-Token: dev-token" -H "X-Telegram-Id: 111" -H "Content-Type: application/json" -d "{\"client_id\":4,\"telegram_id\":\"999999999\",\"subscription_days\":30}" http://localhost:8080/api/admin/clients/grant

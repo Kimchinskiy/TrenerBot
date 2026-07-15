@@ -1,0 +1,224 @@
+package http
+
+import (
+	"encoding/json"
+	"log/slog"
+	"net/http"
+	"strings"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+
+	"trenerbot/internal/config"
+	"trenerbot/internal/domain"
+	"trenerbot/internal/service"
+)
+
+// AuthMiddleware resolves the caller from either:
+//   - X-Service-Token + X-Telegram-Id  (bot channel, ТЗ §2/§15)
+//   - Authorization: Bearer <JWT>       (future web panel)
+func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			svcToken := r.Header.Get("X-Service-Token")
+			if svcToken != "" && svcToken == cfg.ServiceToken {
+				tgID := r.Header.Get("X-Telegram-Id")
+				if tgID == "" {
+					// system/bot account (e.g. polling the notification outbox)
+					sys := &domain.User{ID: 0, Role: domain.RoleAdmin}
+					next.ServeHTTP(w, r.WithContext(withUser(r.Context(), sys)))
+					return
+				}
+				u, err := svc.Store.UserByTelegram(tgID)
+				if err != nil {
+					writeError(w, http.StatusInternalServerError, "internal")
+					return
+				}
+				if u == nil {
+					writeError(w, http.StatusUnauthorized, "unknown telegram user")
+					return
+				}
+				next.ServeHTTP(w, r.WithContext(withUser(r.Context(), u)))
+				return
+			}
+
+			authz := r.Header.Get("Authorization")
+			if strings.HasPrefix(authz, "Bearer ") {
+				tok := strings.TrimPrefix(authz, "Bearer ")
+				claims, err := svc.Tokens.Parse(tok)
+				if err != nil {
+					writeError(w, http.StatusUnauthorized, "invalid token")
+					return
+				}
+				u, err := svc.Store.UserByID(claims.UserID)
+				if err != nil || u == nil {
+					writeError(w, http.StatusUnauthorized, "unknown user")
+					return
+				}
+				next.ServeHTTP(w, r.WithContext(withUser(r.Context(), u)))
+				return
+			}
+
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+		})
+	}
+}
+
+// serviceTokenOnly requires a valid X-Service-Token and sets a system caller. Used for open
+// endpoints like registration where the user does not exist yet.
+func serviceTokenOnly(cfg *config.Config, next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("X-Service-Token") != cfg.ServiceToken {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		next.ServeHTTP(w, r.WithContext(withUser(r.Context(), &domain.User{ID: 0, Role: domain.RoleClient})))
+	}
+}
+func guard(svc *service.Services, roles []domain.Role, h handlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := UserFrom(r.Context())
+		if u == nil {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		ok := false
+		for _, role := range roles {
+			if u.Role == role {
+				ok = true
+				break
+			}
+		}
+		if !ok {
+			writeError(w, http.StatusForbidden, "forbidden")
+			return
+		}
+		h(svc, w, r)
+	}
+}
+
+type handlerFunc func(svc *service.Services, w http.ResponseWriter, r *http.Request)
+
+func Logger(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+		next.ServeHTTP(ww, r)
+		slog.Info("http",
+			"method", r.Method,
+			"path", r.URL.Path,
+			"status", ww.Status(),
+			"dur", time.Since(start).String(),
+		)
+	})
+}
+
+// Router builds the chi router with all MVP endpoints.
+func Router(svc *service.Services, cfg *config.Config) http.Handler {
+	r := chi.NewRouter()
+	r.Use(middleware.Recoverer)
+	r.Use(Logger)
+	r.Use(corsAllow)
+
+	r.Get("/health", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
+	// Registration is open: only the service token is required (the user is created here).
+	r.Post("/api/auth/telegram", serviceTokenOnly(cfg, func(w http.ResponseWriter, r *http.Request) {
+		authTelegram(svc, w, r)
+	}))
+
+	r.Route("/api", func(r chi.Router) {
+		r.Use(AuthMiddleware(svc, cfg))
+
+		// Auth
+		r.Post("/auth/telegram", func(w http.ResponseWriter, r *http.Request) { authTelegram(svc, w, r) })
+
+		// Clients
+		r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClients))
+		r.Get("/clients/me", func(w http.ResponseWriter, r *http.Request) { clientsMe(svc, w, r) })
+		r.Get("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getClient))
+		r.Put("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, updateClient))
+
+		// Coaches
+		r.Get("/coaches", func(w http.ResponseWriter, r *http.Request) { listCoaches(svc, w, r) })
+		r.Post("/coaches", guard(svc, []domain.Role{domain.RoleAdmin}, createCoach))
+		r.Patch("/coaches/{id}/telegram", guard(svc, []domain.Role{domain.RoleAdmin}, bindCoachTelegram))
+
+		// Lessons
+		r.Get("/lessons", func(w http.ResponseWriter, r *http.Request) { listLessons(svc, w, r) })
+		r.Post("/lessons", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createLesson))
+		r.Get("/lessons/{id}", func(w http.ResponseWriter, r *http.Request) { getLesson(svc, w, r) })
+		r.Patch("/lessons/{id}/status", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, setLessonStatus))
+		r.Get("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listAttendance))
+		r.Post("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleCoach}, markAttendance))
+		r.Post("/lessons/{id}/register", func(w http.ResponseWriter, r *http.Request) { registerClient(svc, w, r) })
+
+		// Files
+		r.Post("/files", func(w http.ResponseWriter, r *http.Request) { uploadFile(svc, w, r) })
+
+		// Notifications dispatch (bot polls these via service-token)
+		r.Get("/notifications/due", func(w http.ResponseWriter, r *http.Request) { notificationsDue(svc, w, r) })
+		r.Post("/notifications/{id}/result", func(w http.ResponseWriter, r *http.Request) { notificationsResult(svc, w, r) })
+
+		// Client -> coach contact (ТЗ §4)
+		r.Post("/messages/coach", func(w http.ResponseWriter, r *http.Request) { messageCoach(svc, w, r) })
+
+		// Reports
+		r.Get("/reports", guard(svc, []domain.Role{domain.RoleAdmin}, getReport))
+
+		// Admin panel
+		r.Get("/admin/clients", guard(svc, []domain.Role{domain.RoleAdmin}, adminListClients))
+		r.Post("/admin/clients/grant", guard(svc, []domain.Role{domain.RoleAdmin}, adminGrantBotAccess))
+		r.Post("/admin/clients/revoke", guard(svc, []domain.Role{domain.RoleAdmin}, adminRevokeBotAccess))
+
+		// Waiting List
+		r.Get("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, waitingList))
+		r.Post("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addToWaitingList))
+		r.Delete("/waiting-list/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeFromWaitingList))
+
+		// Lesson notifications
+		r.Post("/lessons/{id}/notify", guard(svc, []domain.Role{domain.RoleCoach}, notifyLessonChange))
+
+		// Debtors widget
+		r.Get("/debtors", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, debtorsWidget))
+
+		// Social media links
+		r.Get("/social-media", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, socialMediaLinks))
+
+		// New client FAQ
+		r.Get("/faq", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, newClientFAQ))
+
+		// Wellbeing feedback
+		r.Post("/wellbeing", guard(svc, []domain.Role{domain.RoleClient}, submitWellbeing))
+		r.Get("/wellbeing/{client_id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, wellbeingHistory))
+	})
+
+	return r
+}
+
+func corsAllow(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Service-Token, X-Telegram-Id")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, PATCH, DELETE, OPTIONS")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+func writeJSON(w http.ResponseWriter, code int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(code)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, code int, msg string) {
+	writeJSON(w, code, map[string]string{"error": msg})
+}
