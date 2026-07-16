@@ -3,9 +3,6 @@ import withPWA from 'next-pwa'
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  experimental: {
-    devIndicators: false,
-  },
   async rewrites() {
     const target = process.env.API_BASE_URL || 'http://localhost:8080'
     return [

@@ -50,4 +50,10 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+
+  /* Hide Next.js dev indicator in development */
+  #next-logo,
+  [data-nextjs-dev-tools-button="true"] {
+    display: none !important;
+  }
 }
