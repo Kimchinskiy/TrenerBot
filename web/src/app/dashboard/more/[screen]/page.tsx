@@ -1,5 +1,3 @@
-'use client'
-
 import { notFound } from 'next/navigation'
 import AttendanceScreen from '@/features/more/attendance-screen'
 import WellbeingScreen from '@/features/more/wellbeing-screen'
