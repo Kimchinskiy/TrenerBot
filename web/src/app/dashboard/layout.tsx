@@ -3,26 +3,8 @@
 import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-provider'
-
-function Tab({
-  active,
-  label,
-  href,
-}: {
-  active: boolean
-  label: string
-  href: string
-}) {
-  const router = useRouter()
-  return (
-    <button
-      onClick={() => router.push(href)}
-      className={`flex-1 py-3 text-sm font-medium ${active ? 'text-tg-button' : 'text-tg-hint'}`}
-    >
-      {label}
-    </button>
-  )
-}
+import FloatingNavbar, { type FloatingNavItem } from '@/components/ui/floating-navbar'
+import { CalendarDays, User, MoreHorizontal } from 'lucide-react'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { status } = useAuth()
@@ -41,18 +23,37 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     )
   }
 
-  const isSchedule = pathname.startsWith('/dashboard/schedule')
-  const isProfile = pathname.startsWith('/dashboard/profile')
-  const isMore = pathname.startsWith('/dashboard/more')
+  const items: FloatingNavItem[] = [
+    {
+      label: 'Расписание',
+      icon: <CalendarDays className="h-5 w-5" />,
+      href: '/dashboard/schedule',
+    },
+    {
+      label: 'Профиль',
+      icon: <User className="h-5 w-5" />,
+      href: '/dashboard/profile',
+    },
+    {
+      label: 'Ещё',
+      icon: <MoreHorizontal className="h-5 w-5" />,
+      href: '/dashboard/more',
+    },
+  ]
+
+  const handleNav = (href?: string) => {
+    if (href) router.push(href)
+  }
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-y-auto">{children}</div>
-      <nav className="flex border-t border-tg-secondary bg-tg-bg">
-        <Tab active={isSchedule} label="📅 Расписание" href="/dashboard/schedule" />
-        <Tab active={isProfile} label="👤 Профиль" href="/dashboard/profile" />
-        <Tab active={isMore} label="☰ Ещё" href="/dashboard/more" />
-      </nav>
+      <div className="flex-1 overflow-y-auto pb-24">{children}</div>
+      <FloatingNavbar
+        items={items.map((item) => ({
+          ...item,
+          onClick: () => handleNav(item.href),
+        }))}
+      />
     </div>
   )
 }
