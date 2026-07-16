@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { login } from './lib/auth'
+import { tryAutoLogin } from './lib/auth'
 import { applyTheme } from './lib/theme'
 import { useMe } from './lib/hooks'
 import { Spinner } from './components/ui'
 import type { Role } from './lib/types'
 
+import Login from './screens/Login'
 import Schedule from './screens/Schedule'
 import Profile from './screens/Profile'
 import More, { type ExtraScreen } from './screens/More'
@@ -83,28 +84,24 @@ function Shell() {
 }
 
 function App() {
-  const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
-  const [authError, setAuthError] = useState('')
+  const [status, setStatus] = useState<'loading' | 'authed' | 'guest'>('loading')
 
   useEffect(() => {
     applyTheme()
-    login()
-      .then(() => setStatus('ready'))
-      .catch((e: unknown) => {
-        setAuthError(e instanceof Error ? e.message : 'Ошибка входа')
-        setStatus('error')
-      })
+    tryAutoLogin()
+      .then((ok) => setStatus(ok ? 'authed' : 'guest'))
+      .catch(() => setStatus('guest'))
   }, [])
 
   if (status === 'loading') {
     return (
       <div className="flex h-full items-center justify-center">
-        <Spinner label="Вход..." />
+        <Spinner label="Загрузка..." />
       </div>
     )
   }
-  if (status === 'error') {
-    return <div className="p-6 text-center text-tg-hint">{authError}</div>
+  if (status === 'guest') {
+    return <Login onSuccess={() => setStatus('authed')} />
   }
   return <Shell />
 }

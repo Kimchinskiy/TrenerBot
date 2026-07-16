@@ -11,12 +11,40 @@ const (
 	RoleParent Role = "parent"
 )
 
+// User is a single account. Telegram, MAX and password are just ways to
+// authenticate the same user; the primary identifier is User.ID (not TelegramID).
 type User struct {
-	ID         int64      `json:"id"`
-	TelegramID *string    `json:"telegram_id,omitempty"`
-	Role       Role       `json:"role"`
-	JWTRefresh *string    `json:"-"`
-	CreatedAt  time.Time  `json:"created_at"`
+	ID           int64   `json:"id"`
+	Phone        *string `json:"phone,omitempty"`
+	PasswordHash *string `json:"-"`
+	TelegramID   *string `json:"telegram_id,omitempty"`
+	MaxID        *string `json:"max_id,omitempty"`
+	FirstName    *string `json:"first_name,omitempty"`
+	LastName     *string `json:"last_name,omitempty"`
+	AvatarURL    *string `json:"avatar_url,omitempty"`
+	Role         Role    `json:"role"`
+	JWTRefresh   *string `json:"-"`
+
+	CreatedAt time.Time  `json:"created_at"`
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
+// HasPassword reports whether the user can log in with phone+password.
+func (u *User) HasPassword() bool { return u.PasswordHash != nil && *u.PasswordHash != "" }
+
+// AuthMethods lists the enabled login methods for this account.
+func (u *User) AuthMethods() []string {
+	methods := []string{}
+	if u.HasPassword() {
+		methods = append(methods, "password")
+	}
+	if u.TelegramID != nil && *u.TelegramID != "" {
+		methods = append(methods, "telegram")
+	}
+	if u.MaxID != nil && *u.MaxID != "" {
+		methods = append(methods, "max")
+	}
+	return methods
 }
 
 type Client struct {

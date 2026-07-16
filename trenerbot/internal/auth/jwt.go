@@ -9,32 +9,47 @@ import (
 	"trenerbot/internal/domain"
 )
 
+// TokenService issues short-lived access JWTs. Refresh tokens are opaque random
+// strings persisted (hashed) in the store, handled by the service layer.
 type TokenService struct {
-	secret []byte
-	ttl    time.Duration
+	secret     []byte
+	accessTTL  time.Duration
+	refreshTTL time.Duration
 }
 
-func NewTokenService(secret string, ttl time.Duration) *TokenService {
-	if ttl == 0 {
-		ttl = 24 * time.Hour
+func NewTokenService(secret string, accessTTL time.Duration) *TokenService {
+	if accessTTL == 0 {
+		accessTTL = 15 * time.Minute
 	}
-	return &TokenService{secret: []byte(secret), ttl: ttl}
+	return &TokenService{
+		secret:     []byte(secret),
+		accessTTL:  accessTTL,
+		refreshTTL: 30 * 24 * time.Hour,
+	}
 }
+
+// RefreshTTL is the lifetime used when persisting refresh tokens.
+func (t *TokenService) RefreshTTL() time.Duration { return t.refreshTTL }
 
 type Claims struct {
-	UserID int64      `json:"uid"`
+	UserID int64       `json:"uid"`
 	Role   domain.Role `json:"role"`
 	jwt.RegisteredClaims
 }
 
+// Generate issues an access token. Kept for backward compatibility (bot flow).
 func (t *TokenService) Generate(userID int64, role domain.Role) (string, error) {
+	return t.GenerateAccess(userID, role)
+}
+
+func (t *TokenService) GenerateAccess(userID int64, role domain.Role) (string, error) {
 	now := time.Now()
 	claims := Claims{
 		UserID: userID,
 		Role:   role,
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(now),
-			ExpiresAt: jwt.NewNumericDate(now.Add(t.ttl)),
+			ExpiresAt: jwt.NewNumericDate(now.Add(t.accessTTL)),
 			Subject:   string(role),
 		},
 	}

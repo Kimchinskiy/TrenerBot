@@ -65,6 +65,25 @@ export interface WellbeingEntry {
   time: string
 }
 
+export interface User {
+  id: number
+  phone?: string | null
+  telegram_id?: string | null
+  max_id?: string | null
+  first_name?: string | null
+  last_name?: string | null
+  avatar_url?: string | null
+  role: Role
+  created_at?: string
+  updated_at?: string | null
+}
+
+export interface AuthTokens {
+  access_token: string
+  refresh_token: string
+  user: User
+}
+
 export interface AuthResult {
   user: { id: number; role: string }
   client: Client | null

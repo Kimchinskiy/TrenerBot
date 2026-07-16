@@ -131,14 +131,30 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		authTelegram(svc, w, r)
 	}))
 
-	// Telegram Mini App login: validated via initData signature, then a JWT is issued.
-	r.Post("/api/auth/telegram-webapp", webAppLogin(svc, cfg))
+	// ---- Website authentication (primary product). Public endpoints. ----
+	// optionalAuth lets provider logins also act as "link to my account" when a token is sent.
+	r.Group(func(r chi.Router) {
+		r.Use(optionalAuth(svc))
+		r.Post("/api/auth/register", registerByPhone(svc))
+		r.Post("/api/auth/login", loginByPhone(svc))
+		r.Post("/api/auth/refresh", refreshTokens(svc))
+		r.Post("/api/auth/logout", logout(svc))
+		r.Post("/api/auth/telegram-widget", telegramWidgetLogin(svc, cfg))
+		r.Post("/api/auth/max", maxLogin(svc, cfg))
+		// Telegram Mini App login: additional method, validated via initData signature.
+		r.Post("/api/auth/telegram-webapp", webAppLogin(svc, cfg))
+	})
 
 	r.Route("/api", func(r chi.Router) {
 		r.Use(AuthMiddleware(svc, cfg))
 
 		// Auth
 		r.Post("/auth/telegram", func(w http.ResponseWriter, r *http.Request) { authTelegram(svc, w, r) })
+
+		// Current account (single User entity) + login-method management.
+		r.Get("/me", func(w http.ResponseWriter, r *http.Request) { getMe(svc, w, r) })
+		r.Post("/auth/link/telegram", linkTelegramWidget(svc, cfg))
+		r.Post("/auth/set-password", setPassword(svc))
 
 		// Clients
 		r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClients))

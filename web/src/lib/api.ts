@@ -6,11 +6,13 @@ import type {
   WaitingItem,
   WellbeingEntry,
   Client,
+  AuthTokens,
 } from './types'
 
 const API_BASE = import.meta.env.VITE_API_URL || '/api'
 
 const TOKEN_KEY = 'trenerbot_token'
+const REFRESH_KEY = 'trenerbot_refresh'
 
 export function getToken(): string | null {
   return localStorage.getItem(TOKEN_KEY)
@@ -24,6 +26,29 @@ export function clearToken() {
   localStorage.removeItem(TOKEN_KEY)
 }
 
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_KEY)
+}
+
+export function setRefreshToken(token: string) {
+  localStorage.setItem(REFRESH_KEY, token)
+}
+
+export function clearRefreshToken() {
+  localStorage.removeItem(REFRESH_KEY)
+}
+
+// Persist the token pair returned by any auth endpoint.
+export function storeTokens(t: { access_token: string; refresh_token: string }) {
+  setToken(t.access_token)
+  setRefreshToken(t.refresh_token)
+}
+
+export function clearSession() {
+  clearToken()
+  clearRefreshToken()
+}
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -32,7 +57,38 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+// Attempt to refresh the access token using the stored refresh token.
+// Returns the new access token or null when refresh is impossible.
+let refreshInFlight: Promise<string | null> | null = null
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refresh = getRefreshToken()
+  if (!refresh) return null
+  if (refreshInFlight) return refreshInFlight
+  refreshInFlight = (async () => {
+    try {
+      const res = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refresh_token: refresh }),
+      })
+      if (!res.ok) {
+        clearSession()
+        return null
+      }
+      const data = (await res.json()) as { access_token: string; refresh_token: string }
+      storeTokens(data)
+      return data.access_token
+    } catch {
+      return null
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+  return refreshInFlight
+}
+
+async function request<T>(path: string, options: RequestInit = {}, retry = true): Promise<T> {
   const headers = new Headers(options.headers)
   if (options.body && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
@@ -44,7 +100,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   const res = await fetch(`${API_BASE}${path}`, { ...options, headers })
   if (res.status === 401) {
-    clearToken()
+    // Try a one-time transparent refresh before failing.
+    if (retry) {
+      const newToken = await refreshAccessToken()
+      if (newToken) {
+        return request<T>(path, options, false)
+      }
+    }
+    clearSession()
     throw new ApiError(401, 'unauthorized')
   }
   if (!res.ok) {
@@ -65,12 +128,40 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 export const api = {
   base: API_BASE,
 
-  // Public: exchange Telegram initData for a JWT.
+  // Website auth (primary): phone + password.
+  register(phone: string, password: string, firstName: string, lastName: string) {
+    return request<AuthTokens>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password, first_name: firstName, last_name: lastName }),
+    })
+  },
+  login(phone: string, password: string) {
+    return request<AuthTokens>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ phone, password }),
+    })
+  },
+  logout(refreshToken: string) {
+    return request<{ status: string }>('/auth/logout', {
+      method: 'POST',
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    })
+  },
+
+  // Telegram Login Widget (website login, not Mini App). `fields` is the widget payload.
+  loginTelegramWidget(fields: Record<string, string>) {
+    return request<AuthTokens>('/auth/telegram-widget', {
+      method: 'POST',
+      body: JSON.stringify(fields),
+    })
+  },
+
+  // Additional method: exchange Telegram Mini App initData for a token pair.
   loginWebApp(initData: string) {
-    return request<{ user: { id: number; role: string }; client: MeResult['client']; token: string }>(
-      '/auth/telegram-webapp',
-      { method: 'POST', body: JSON.stringify({ init_data: initData }) },
-    )
+    return request<AuthTokens>('/auth/telegram-webapp', {
+      method: 'POST',
+      body: JSON.stringify({ init_data: initData }),
+    })
   },
 }
 

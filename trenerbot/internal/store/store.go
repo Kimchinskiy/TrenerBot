@@ -16,42 +16,138 @@ func New(db *sql.DB) *Store { return &Store{DB: db} }
 
 // ---------- Users ----------
 
-func (s *Store) UserByTelegram(tgID string) (*domain.User, error) {
+const userColumns = `id, phone, password_hash, telegram_id, max_id, first_name, last_name, avatar_url, role, created_at, updated_at`
+
+func scanUser(row interface{ Scan(...any) error }) (*domain.User, error) {
 	u := &domain.User{}
+	var phone, pass, tgID, maxID, first, last, avatar sql.NullString
 	var created string
-	err := s.DB.QueryRow(`SELECT id, telegram_id, role, created_at FROM users WHERE telegram_id = ?`, tgID).
-		Scan(&u.ID, &u.TelegramID, &u.Role, &created)
+	var updated sql.NullString
+	err := row.Scan(&u.ID, &phone, &pass, &tgID, &maxID, &first, &last, &avatar, &u.Role, &created, &updated)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
+	u.Phone = nullStr(phone)
+	u.PasswordHash = nullStr(pass)
+	u.TelegramID = nullStr(tgID)
+	u.MaxID = nullStr(maxID)
+	u.FirstName = nullStr(first)
+	u.LastName = nullStr(last)
+	u.AvatarURL = nullStr(avatar)
 	u.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", created)
+	if updated.Valid {
+		if t, err := time.Parse("2006-01-02 15:04:05", updated.String); err == nil {
+			u.UpdatedAt = &t
+		}
+	}
 	return u, nil
+}
+
+func nullStr(v sql.NullString) *string {
+	if !v.Valid {
+		return nil
+	}
+	s := v.String
+	return &s
+}
+
+func (s *Store) UserByTelegram(tgID string) (*domain.User, error) {
+	return scanUser(s.DB.QueryRow(`SELECT `+userColumns+` FROM users WHERE telegram_id = ?`, tgID))
 }
 
 func (s *Store) UserByID(id int64) (*domain.User, error) {
-	u := &domain.User{}
-	var created string
-	err := s.DB.QueryRow(`SELECT id, telegram_id, role, created_at FROM users WHERE id = ?`, id).
-		Scan(&u.ID, &u.TelegramID, &u.Role, &created)
-	if err == sql.ErrNoRows {
-		return nil, nil
-	}
-	if err != nil {
-		return nil, err
-	}
-	u.CreatedAt, _ = time.Parse("2006-01-02 15:04:05", created)
-	return u, nil
+	return scanUser(s.DB.QueryRow(`SELECT `+userColumns+` FROM users WHERE id = ?`, id))
 }
 
+func (s *Store) UserByPhone(phone string) (*domain.User, error) {
+	return scanUser(s.DB.QueryRow(`SELECT `+userColumns+` FROM users WHERE phone = ?`, phone))
+}
+
+func (s *Store) UserByMaxID(maxID string) (*domain.User, error) {
+	return scanUser(s.DB.QueryRow(`SELECT `+userColumns+` FROM users WHERE max_id = ?`, maxID))
+}
+
+// CreateUser inserts a Telegram-only account (kept for the bot self-registration flow).
 func (s *Store) CreateUser(tgID *string, role domain.Role) (int64, error) {
-	res, err := s.DB.Exec(`INSERT INTO users(telegram_id, role) VALUES (?, ?)`, tgID, string(role))
+	res, err := s.DB.Exec(`INSERT INTO users(telegram_id, role, updated_at) VALUES (?, ?, datetime('now'))`, tgID, string(role))
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
+}
+
+// InsertUser creates a full user account (website registration / provider login).
+func (s *Store) InsertUser(u domain.User) (int64, error) {
+	res, err := s.DB.Exec(`INSERT INTO users(phone, password_hash, telegram_id, max_id, first_name, last_name, avatar_url, role, updated_at)
+		VALUES (?,?,?,?,?,?,?,?, datetime('now'))`,
+		u.Phone, u.PasswordHash, u.TelegramID, u.MaxID, u.FirstName, u.LastName, u.AvatarURL, string(u.Role))
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// UpdateUserProfile updates the mutable profile/identity fields of a user.
+func (s *Store) UpdateUserProfile(u domain.User) error {
+	_, err := s.DB.Exec(`UPDATE users SET phone=?, password_hash=?, telegram_id=?, max_id=?,
+		first_name=?, last_name=?, avatar_url=?, role=?, updated_at=datetime('now') WHERE id=?`,
+		u.Phone, u.PasswordHash, u.TelegramID, u.MaxID, u.FirstName, u.LastName, u.AvatarURL, string(u.Role), u.ID)
+	return err
+}
+
+// LinkTelegram attaches a telegram_id to an existing user (login-method linking).
+func (s *Store) LinkTelegram(userID int64, tgID string) error {
+	_, err := s.DB.Exec(`UPDATE users SET telegram_id=?, updated_at=datetime('now') WHERE id=?`, tgID, userID)
+	return err
+}
+
+// LinkMax attaches a max_id to an existing user.
+func (s *Store) LinkMax(userID int64, maxID string) error {
+	_, err := s.DB.Exec(`UPDATE users SET max_id=?, updated_at=datetime('now') WHERE id=?`, maxID, userID)
+	return err
+}
+
+// ---------- Refresh tokens ----------
+
+func (s *Store) InsertRefreshToken(userID int64, tokenHash string, expiresAt time.Time) error {
+	_, err := s.DB.Exec(`INSERT INTO refresh_tokens(user_id, token_hash, expires_at) VALUES (?,?,?)`,
+		userID, tokenHash, expiresAt.Format("2006-01-02 15:04:05"))
+	return err
+}
+
+// RefreshTokenUser returns the owning user id if the token hash is valid (not revoked, not expired).
+func (s *Store) RefreshTokenUser(tokenHash string) (int64, error) {
+	var userID int64
+	var expires string
+	var revoked int
+	err := s.DB.QueryRow(`SELECT user_id, expires_at, revoked FROM refresh_tokens WHERE token_hash = ?`, tokenHash).
+		Scan(&userID, &expires, &revoked)
+	if err == sql.ErrNoRows {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	if revoked == 1 {
+		return 0, nil
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", expires); err == nil && t.Before(time.Now()) {
+		return 0, nil
+	}
+	return userID, nil
+}
+
+func (s *Store) RevokeRefreshToken(tokenHash string) error {
+	_, err := s.DB.Exec(`UPDATE refresh_tokens SET revoked=1 WHERE token_hash=?`, tokenHash)
+	return err
+}
+
+func (s *Store) RevokeAllRefreshTokens(userID int64) error {
+	_, err := s.DB.Exec(`UPDATE refresh_tokens SET revoked=1 WHERE user_id=?`, userID)
+	return err
 }
 
 // ---------- Clients ----------

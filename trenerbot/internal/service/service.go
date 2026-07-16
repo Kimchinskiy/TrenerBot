@@ -67,7 +67,7 @@ func (s *Services) TelegramLogin(req TelegramLoginRequest) (*domain.User, *domai
 			return nil, nil, "", err
 		}
 		// notify all coaches about a new client
-		_ = s.notifyCoaches("new_client", map[string]any{"client_id": cid, "name": req.FullName})
+		_ = s.notifyCoaches("new_client", map[string]any{"user_id": uid, "name": req.FullName})
 		return u, client, tok, nil
 	}
 

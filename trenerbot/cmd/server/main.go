@@ -30,7 +30,7 @@ func main() {
 	defer database.Close()
 
 	s := store.New(database)
-	tokens := auth.NewTokenService(cfg.JWTSecret, 24*time.Hour)
+	tokens := auth.NewTokenService(cfg.JWTSecret, cfg.AccessTokenTTL)
 	svc := service.New(s, tokens)
 
 	// Background jobs: reap stale claims + ensure 08:00 reminders (ТЗ §9/§15).

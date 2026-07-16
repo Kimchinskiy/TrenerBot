@@ -29,6 +29,9 @@ type Config struct {
 	// Scheduler
 	SchedulerInterval time.Duration
 
+	// Access token lifetime (short-lived; refresh tokens handle long sessions).
+	AccessTokenTTL time.Duration
+
 	// API base URL used by the bot adapter to reach the backend.
 	APIBaseURL string
 }
@@ -51,6 +54,7 @@ func Load() (*Config, error) {
 		WebAppURL: getEnv("WEBAPP_URL", ""),
 
 		SchedulerInterval: getEnvDuration("SCHEDULER_INTERVAL", 30*time.Second),
+		AccessTokenTTL:    getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
 		APIBaseURL:        getEnv("API_BASE_URL", "http://localhost:8080"),
 	}
 

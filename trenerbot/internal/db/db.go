@@ -71,10 +71,22 @@ func Migrate(d *sql.DB) error {
 		if exists == 1 {
 			continue
 		}
-		if _, err := d.Exec(m.body); err != nil {
+		// Apply each migration atomically: if any statement in the body fails, the whole
+		// migration rolls back so it can be safely retried on the next start (avoids a
+		// half-applied schema, e.g. a column added but a constraint-carrying backfill aborted).
+		tx, err := d.Begin()
+		if err != nil {
+			return err
+		}
+		if _, err := tx.Exec(m.body); err != nil {
+			_ = tx.Rollback()
 			return fmt.Errorf("apply migration %s: %w", m.version, err)
 		}
-		if _, err := d.Exec(`INSERT INTO schema_migrations(version) VALUES (?)`, m.version); err != nil {
+		if _, err := tx.Exec(`INSERT INTO schema_migrations(version) VALUES (?)`, m.version); err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+		if err := tx.Commit(); err != nil {
 			return err
 		}
 	}
