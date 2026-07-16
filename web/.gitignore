@@ -1,14 +1,3 @@
-# Build artifacts
-bin/
-*.exe~
-dist/
-
-# Go build cache
-.gocache/
-
-# Node
-node_modules/
-
 # Next.js
 .next/
 out/
@@ -22,18 +11,8 @@ out/
 public/sw.js
 public/workbox-*.js
 
-# Kilo internal
-.kilo/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
+# Node
+node_modules/
 
 # Environment
 .env
@@ -46,3 +25,16 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo

@@ -9,7 +9,7 @@ import type {
   AuthTokens,
 } from './types'
 
-const API_BASE = import.meta.env.VITE_API_URL || '/api'
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
 
 const TOKEN_KEY = 'trenerbot_token'
 const REFRESH_KEY = 'trenerbot_refresh'
@@ -108,6 +108,10 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
       }
     }
     clearSession()
+    // Notify the auth state listener (e.g. redirect to login).
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('auth:unauthorized'))
+    }
     throw new ApiError(401, 'unauthorized')
   }
   if (!res.ok) {

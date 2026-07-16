@@ -84,10 +84,4 @@ export interface AuthTokens {
   user: User
 }
 
-export interface AuthResult {
-  user: { id: number; role: string }
-  client: Client | null
-  token: string
-}
-
 export type Role = MeResult['role']

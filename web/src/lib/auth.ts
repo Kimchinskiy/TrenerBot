@@ -1,20 +1,6 @@
 import { api, storeTokens, clearSession, getToken, getRefreshToken } from './api'
+import { getInitData, isInsideTelegram, webApp } from '@/services/telegram'
 import type { AuthTokens } from './types'
-
-// Telegram WebApp SDK (lazy access so the app still works in a normal browser).
-function webApp(): any {
-  return (window as any).Telegram?.WebApp
-}
-
-export function getInitData(): string {
-  const tw = webApp()
-  return tw?.initData ?? ''
-}
-
-// isInsideTelegram reports whether the app is running inside the Telegram Mini App.
-export function isInsideTelegram(): boolean {
-  return !!getInitData()
-}
 
 // tryAutoLogin attempts a session without user interaction:
 //   1. a previously stored access token (returning visitor);

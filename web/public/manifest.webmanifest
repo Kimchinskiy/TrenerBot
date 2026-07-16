@@ -1,0 +1,36 @@
+{
+  "name": "Плавли — Спортивная CRM",
+  "short_name": "Плавли",
+  "description": "Мобильное приложение тренера и клиента",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
+  "categories": ["sports", "health", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Расписание",
+      "url": "/dashboard/schedule"
+    },
+    {
+      "name": "Профиль",
+      "url": "/dashboard/profile"
+    }
+  ]
+}
