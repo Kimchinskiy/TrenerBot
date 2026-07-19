@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useRouter } from 'next/navigation'
-import { Button, Input, Label } from '@/components/ui'
+import { Button, Input, Label, Card } from '@/components/ui'
 import { ScreenHeader, ErrorBox } from '@/components/ui/screen'
 import { registerSchema, type RegisterValues } from '../schemas'
 import { registerWithPassword } from '@/lib/auth'
@@ -42,45 +42,81 @@ export function RegisterForm() {
   })
 
   return (
-    <div>
-      <ScreenHeader title="Регистрация" subtitle="Спортивная CRM" />
-      <div className="flex flex-col gap-3 px-4 pb-8">
-        {serverError && (
-          <div className="rounded-xl bg-red-500/15 p-3 text-sm text-red-300">{serverError}</div>
-        )}
-        <form onSubmit={onSubmit} className="flex flex-col gap-3">
-          <div>
-            <Label htmlFor="firstName">Имя</Label>
-            <Input id="firstName" placeholder="Имя" autoComplete="given-name" {...register('firstName')} />
-            {errors.firstName && <p className="mt-1 text-xs text-red-400">{errors.firstName.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="lastName">Фамилия</Label>
-            <Input id="lastName" placeholder="Фамилия" autoComplete="family-name" {...register('lastName')} />
-            {errors.lastName && <p className="mt-1 text-xs text-red-400">{errors.lastName.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="phone">Телефон</Label>
-            <Input id="phone" placeholder="Телефон, например +79991234567" inputMode="tel" autoComplete="tel" {...register('phone')} />
-            {errors.phone && <p className="mt-1 text-xs text-red-400">{errors.phone.message}</p>}
-          </div>
-          <div>
-            <Label htmlFor="password">Пароль</Label>
-            <Input id="password" type="password" placeholder="Пароль (минимум 6 символов)" autoComplete="new-password" {...register('password')} />
-            {errors.password && <p className="mt-1 text-xs text-red-400">{errors.password.message}</p>}
-          </div>
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Подождите...' : 'Зарегистрироваться'}
-          </Button>
-        </form>
+    <div className="min-h-screen flex flex-col justify-center px-4 py-8">
+      <div className="w-full max-w-md mx-auto">
+        <ScreenHeader title="Регистрация" subtitle="Создайте личный кабинет CRM" />
+        
+        <Card className="mt-2 flex flex-col gap-4 shadow-lg border-border/80">
+          {serverError && <ErrorBox error={new Error(serverError)} />}
+          
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <div>
+              <Label htmlFor="firstName">Имя</Label>
+              <Input
+                id="firstName"
+                placeholder="Климент"
+                autoComplete="given-name"
+                {...register('firstName')}
+              />
+              {errors.firstName && (
+                <p className="mt-1.5 text-xs font-semibold text-destructive">{errors.firstName.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="lastName">Фамилия</Label>
+              <Input
+                id="lastName"
+                placeholder="Ворошилов"
+                autoComplete="family-name"
+                {...register('lastName')}
+              />
+              {errors.lastName && (
+                <p className="mt-1.5 text-xs font-semibold text-destructive">{errors.lastName.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="phone">Телефон</Label>
+              <Input
+                id="phone"
+                placeholder="+7 (999) 123-45-67"
+                inputMode="tel"
+                autoComplete="tel"
+                {...register('phone')}
+              />
+              {errors.phone && (
+                <p className="mt-1.5 text-xs font-semibold text-destructive">{errors.phone.message}</p>
+              )}
+            </div>
+            
+            <div>
+              <Label htmlFor="password">Пароль</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Минимум 6 символов"
+                autoComplete="new-password"
+                {...register('password')}
+              />
+              {errors.password && (
+                <p className="mt-1.5 text-xs font-semibold text-destructive">{errors.password.message}</p>
+              )}
+            </div>
+            
+            <Button type="submit" disabled={busy} className="mt-2 font-bold">
+              {busy ? 'Подождите...' : 'Зарегистрироваться'}
+            </Button>
+          </form>
 
-        <button
-          type="button"
-          onClick={() => router.push('/login')}
-          className="py-1 text-center text-sm text-tg-link"
-        >
-          Уже есть аккаунт? Войти
-        </button>
+          <button
+            type="button"
+            onClick={() => router.push('/login')}
+            className="py-2 text-center text-sm font-semibold text-primary hover:underline hover:opacity-90 active:scale-95 transition-all"
+          >
+            Уже есть аккаунт? Войти
+          </button>
+        </Card>
       </div>
     </div>
   )

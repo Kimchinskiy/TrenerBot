@@ -3,8 +3,6 @@ import './globals.css'
 import { Providers } from '@/components/providers'
 import { AuthProvider } from '@/components/auth-provider'
 import { ApplyTheme } from '@/components/apply-theme'
-import { InstallPrompt } from '@/components/install-prompt'
-
 export const metadata: Metadata = {
   title: 'Плавли — Спортивная CRM',
   description: 'Мобильное приложение тренера и клиента',
@@ -33,7 +31,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <AuthProvider>
             <ApplyTheme />
             {children}
-            <InstallPrompt />
           </AuthProvider>
         </Providers>
       </body>

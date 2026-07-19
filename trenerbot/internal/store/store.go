@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"log/slog"
+	"strings"
 	"time"
 
 	"trenerbot/internal/domain"
@@ -682,6 +683,188 @@ func (s *Store) InsertFile(f domain.File) (int64, error) {
 		return 0, err
 	}
 	return res.LastInsertId()
+}
+
+// ---------- Lesson entries (new schedule model) ----------
+
+func (s *Store) InsertLessonEntry(e domain.LessonEntry) (int64, error) {
+	res, err := s.DB.Exec(`INSERT INTO lesson_entries(date, time, client_id, coach_id, group_id, duration, status, comment)
+		VALUES (?,?,?,?,?,?,?,?)`, e.Date, e.Time, e.ClientID, e.CoachID, e.GroupID, e.Duration, string(e.Status), e.Comment)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// ListScheduleEntries returns entries in [from, to] joined with client names,
+// ordered by date then time. If coachID > 0, filters by coach; if clientID > 0,
+// filters by client; otherwise returns all.
+func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([]domain.ScheduleEntry, error) {
+	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.full_name, le.coach_id, le.duration, le.status
+		FROM lesson_entries le
+		JOIN clients c ON c.id = le.client_id
+		WHERE le.date >= ? AND le.date <= ?
+		AND (? <= 0 OR le.coach_id = ?)
+		AND (? <= 0 OR le.client_id = ?)
+		ORDER BY le.date, le.time`, from, to, coachID, coachID, clientID, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.ScheduleEntry
+	for rows.Next() {
+		var e domain.ScheduleEntry
+		if err := rows.Scan(&e.ID, &e.Date, &e.Time, &e.ClientID, &e.ClientName, &e.CoachID, &e.Duration, &e.Status); err != nil {
+			return nil, err
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
+// ---------- Coach notification recipients ----------
+
+// ListCoachRecipients returns distinct clients who have lesson entries
+// with the given coach, optionally filtered by date or group.
+func (s *Store) ListCoachRecipients(coachID int64, date string, groupID int64) ([]domain.Recipient, error) {
+	var rows *sql.Rows
+	var err error
+	if date != "" {
+		if coachID > 0 {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id
+				WHERE le.coach_id = ? AND le.date = ?`, coachID, date)
+		} else {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id
+				WHERE le.date = ?`, date)
+		}
+	} else if groupID > 0 {
+		if coachID > 0 {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id
+				WHERE le.coach_id = ? AND le.group_id = ?`, coachID, groupID)
+		} else {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id
+				WHERE le.group_id = ?`, groupID)
+		}
+	} else {
+		if coachID > 0 {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id
+				WHERE le.coach_id = ?`, coachID)
+		} else {
+			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
+				FROM clients c
+				JOIN lesson_entries le ON le.client_id = c.id`)
+		}
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Recipient
+	for rows.Next() {
+		var r domain.Recipient
+		if err := rows.Scan(&r.ClientID, &r.FullName, &r.UserID); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// ---------- Daily attendance ----------
+
+func (s *Store) ListClientsWithLessonsOnDate(date string) ([]domain.DateAttendanceClient, error) {
+	rows, err := s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.photo, le.time
+		FROM clients c
+		JOIN lesson_entries le ON le.client_id = c.id
+		WHERE le.date = ? ORDER BY le.time, c.full_name`, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.DateAttendanceClient
+	for rows.Next() {
+		var r domain.DateAttendanceClient
+		var avatar sql.NullString
+		if err := rows.Scan(&r.ClientID, &r.FullName, &avatar, &r.Time); err != nil {
+			return nil, err
+		}
+		if avatar.Valid {
+			r.Photo = &avatar.String
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) GetDailyAttendance(date string) (map[int64]bool, error) {
+	rows, err := s.DB.Query(`SELECT client_id, present FROM daily_attendance WHERE date = ?`, date)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	m := make(map[int64]bool)
+	for rows.Next() {
+		var cid int64
+		var present int
+		if err := rows.Scan(&cid, &present); err != nil {
+			return nil, err
+		}
+		m[cid] = present == 1
+	}
+	return m, rows.Err()
+}
+
+func (s *Store) SaveDailyAttendance(date string, entries []domain.DailyAttendance) error {
+	tx, err := s.DB.Begin()
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		_, err := tx.Exec(`INSERT INTO daily_attendance(date, client_id, present, marked_by, updated_at) VALUES (?,?,?,?,datetime('now'))
+			ON CONFLICT(date, client_id) DO UPDATE SET present=excluded.present, marked_by=excluded.marked_by, updated_at=excluded.updated_at`,
+			e.Date, e.ClientID, boolToInt(e.Present), e.MarkedBy)
+		if err != nil {
+			_ = tx.Rollback()
+			return err
+		}
+	}
+	return tx.Commit()
+}
+
+// ListRecipientsByIDs returns clients matching the given IDs.
+func (s *Store) ListRecipientsByIDs(ids []int64) ([]domain.Recipient, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	placeholders := strings.Repeat(",?", len(ids))
+	args := make([]any, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	rows, err := s.DB.Query(`SELECT id, full_name, user_id FROM clients WHERE id IN(`+placeholders[1:]+`)`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Recipient
+	for rows.Next() {
+		var r domain.Recipient
+		if err := rows.Scan(&r.ClientID, &r.FullName, &r.UserID); err != nil {
+			return nil, err
+		}
+		out = append(out, r)
+	}
+	return out, rows.Err()
 }
 
 // ---------- Activity log ----------

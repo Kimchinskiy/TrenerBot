@@ -7,8 +7,8 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
       ref={ref}
       onClick={onClick}
       className={cn(
-        'rounded-2xl bg-tg-secondary p-4',
-        onClick ? 'cursor-pointer active:scale-[0.99] transition' : '',
+        'rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm transition-all duration-200',
+        onClick ? 'cursor-pointer hover:border-foreground/20 active:scale-[0.99]' : '',
         className,
       )}
       {...props}
@@ -19,13 +19,13 @@ Card.displayName = 'Card'
 
 const CardHeader = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
-    <div ref={ref} className={cn('flex flex-col space-y-1.5 p-1', className)} {...props} />
+    <div ref={ref} className={cn('flex flex-col space-y-1.5 pb-3', className)} {...props} />
   ),
 )
 CardHeader.displayName = 'CardHeader'
 
 const CardContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('p-1 pt-0', className)} {...props} />,
+  ({ className, ...props }, ref) => <div ref={ref} className={cn('pt-0', className)} {...props} />,
 )
 CardContent.displayName = 'CardContent'
 

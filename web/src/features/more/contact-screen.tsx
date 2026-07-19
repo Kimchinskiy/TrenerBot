@@ -35,15 +35,15 @@ export default function ContactScreen() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Напишите сообщение тренеру..."
-          className="w-full rounded-xl bg-tg-secondary p-3 text-tg-text outline-none"
+          className="w-full rounded-xl border border-input bg-transparent p-3 text-base ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-all duration-200 resize-none shadow-sm"
           rows={5}
         />
         <div className="mt-4">
-          <Button onClick={onSend} disabled={!text.trim() || send.isPending}>
+          <Button onClick={onSend} disabled={!text.trim() || send.isPending} className="font-bold">
             {send.isPending ? 'Отправка...' : 'Отправить тренеру'}
           </Button>
         </div>
-        {send.isSuccess && <div className="mt-3 text-center text-sm text-green-400">Отправлено ✅</div>}
+        {send.isSuccess && <div className="mt-3 text-center text-sm font-semibold text-emerald-400">Отправлено ✅</div>}
       </div>
     </div>
   )

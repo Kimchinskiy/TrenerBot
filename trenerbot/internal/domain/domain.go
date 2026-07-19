@@ -122,6 +122,21 @@ type Attendance struct {
 	MarkedBy *int64     `json:"marked_by,omitempty"`
 }
 
+type DailyAttendance struct {
+	Date     string `json:"date"`
+	ClientID int64  `json:"client_id"`
+	Present  bool   `json:"present"`
+	MarkedBy *int64 `json:"marked_by,omitempty"`
+}
+
+type DateAttendanceClient struct {
+	ClientID int64   `json:"client_id"`
+	FullName string  `json:"full_name"`
+	Time     string  `json:"time"`
+	Present  *bool   `json:"present"`
+	Photo    *string `json:"photo,omitempty"`
+}
+
 type Notification struct {
 	ID             int64      `json:"id"`
 	Channel        string     `json:"channel"`
@@ -140,4 +155,41 @@ type File struct {
 	OwnerID   int64   `json:"owner_id"`
 	Path      string  `json:"path"`
 	Kind      string  `json:"kind"`
+}
+
+// LessonEntry is a single athlete's training session. Each row = one specific
+// athlete on a specific date/time. This replaces the old lessons+attendance
+// model for the schedule feature.
+type LessonEntry struct {
+	ID        int64         `json:"id"`
+	Date      string        `json:"date"`
+	Time      string        `json:"time"`
+	ClientID  int64         `json:"client_id"`
+	CoachID   *int64        `json:"coach_id,omitempty"`
+	GroupID   *int64        `json:"group_id,omitempty"`
+	Duration  int           `json:"duration"`
+	Status    LessonStatus  `json:"status"`
+	Comment   *string       `json:"comment,omitempty"`
+	CreatedAt string        `json:"created_at,omitempty"`
+	UpdatedAt string        `json:"updated_at,omitempty"`
+}
+
+// ScheduleEntry is the API response type for the schedule: a lesson entry
+// joined with the athlete's name for display.
+type ScheduleEntry struct {
+	ID         int64        `json:"id"`
+	Date       string       `json:"date"`
+	Time       string       `json:"time"`
+	ClientID   int64        `json:"client_id"`
+	ClientName string       `json:"client_name"`
+	CoachID    *int64       `json:"coach_id,omitempty"`
+	Duration   int          `json:"duration"`
+	Status     LessonStatus `json:"status"`
+}
+
+// Recipient is a coach's client eligible for notifications.
+type Recipient struct {
+	ClientID int64  `json:"client_id"`
+	FullName string `json:"full_name"`
+	UserID   *int64 `json:"user_id"`
 }

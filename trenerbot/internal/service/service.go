@@ -206,6 +206,19 @@ func (s *Services) RegisterClientToLesson(lessonID, clientID int64) error {
 	return s.Store.SetAttendance(lessonID, clientID, false, nil)
 }
 
+// ---------- Lesson entries (new schedule model) ----------
+
+func (s *Services) GetSchedule(from, to string, role domain.Role, userID, coachID, clientID int64) ([]domain.ScheduleEntry, error) {
+	switch role {
+	case domain.RoleCoach:
+		return s.Store.ListScheduleEntries(from, to, coachID, 0)
+	case domain.RoleClient:
+		return s.Store.ListScheduleEntries(from, to, 0, clientID)
+	default:
+		return s.Store.ListScheduleEntries(from, to, 0, 0)
+	}
+}
+
 // ---------- Lesson change notifications ----------
 
 // NotifyLessonChange notifies all registered participants about a lesson change.
@@ -531,6 +544,79 @@ func (s *Services) MarkResult(id int64, ok bool) error {
 		return s.Store.MarkNotificationSent(id)
 	}
 	return s.Store.MarkNotificationFailed(id)
+}
+
+// SendResult is the result of a batch notification send.
+type SendResult struct {
+	Total    int `json:"total"`
+	Enqueued int `json:"enqueued"`
+	Skipped  int `json:"skipped"`
+	Errors   int `json:"errors"`
+}
+
+// ListRecipients returns eligible recipients for a coach notification.
+func (s *Services) ListRecipients(coachID int64, filter string, groupID int64, clientIDs []int64) ([]domain.Recipient, error) {
+	switch filter {
+	case "today":
+		return s.Store.ListCoachRecipients(coachID, time.Now().Format("2006-01-02"), 0)
+	case "tomorrow":
+		return s.Store.ListCoachRecipients(coachID, time.Now().AddDate(0, 0, 1).Format("2006-01-02"), 0)
+	case "group":
+		return s.Store.ListCoachRecipients(coachID, "", groupID)
+	case "manual":
+		return s.Store.ListRecipientsByIDs(clientIDs)
+	default:
+		return s.Store.ListCoachRecipients(coachID, "", 0)
+	}
+}
+
+// SendCoachNotification sends a notification to all selected recipients.
+func (s *Services) SendCoachNotification(coachID int64, filter string, groupID int64, clientIDs []int64, title, text string) (*SendResult, error) {
+	recipients, err := s.ListRecipients(coachID, filter, groupID, clientIDs)
+	if err != nil {
+		return nil, err
+	}
+	result := &SendResult{Total: len(recipients)}
+	payload, _ := json.Marshal(map[string]string{
+		"title": title,
+		"text":  text,
+	})
+	for _, r := range recipients {
+		if r.UserID == nil {
+			result.Skipped++
+			continue
+		}
+		if err := s.enqueue(*r.UserID, "coach_broadcast", string(payload), time.Now()); err != nil {
+			result.Errors++
+			continue
+		}
+		result.Enqueued++
+	}
+	return result, nil
+}
+
+// ---------- Daily attendance ----------
+
+func (s *Services) GetDateAttendance(date string) ([]domain.DateAttendanceClient, error) {
+	clients, err := s.Store.ListClientsWithLessonsOnDate(date)
+	if err != nil {
+		return nil, err
+	}
+	existing, err := s.Store.GetDailyAttendance(date)
+	if err != nil {
+		return nil, err
+	}
+	for i := range clients {
+		if p, ok := existing[clients[i].ClientID]; ok {
+			v := p
+			clients[i].Present = &v
+		}
+	}
+	return clients, nil
+}
+
+func (s *Services) SaveDateAttendance(date string, entries []domain.DailyAttendance) error {
+	return s.Store.SaveDailyAttendance(date, entries)
 }
 
 // SocialMediaLinks returns configured social media links for the club/coach.

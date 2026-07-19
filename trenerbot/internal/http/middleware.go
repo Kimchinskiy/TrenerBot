@@ -176,12 +176,19 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Post("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleCoach}, markAttendance))
 		r.Post("/lessons/{id}/register", func(w http.ResponseWriter, r *http.Request) { registerClient(svc, w, r) })
 
+		// Schedule (new model — lesson entries per athlete)
+		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) { scheduleHandler(svc, w, r) })
+
 		// Files
 		r.Post("/files", func(w http.ResponseWriter, r *http.Request) { uploadFile(svc, w, r) })
 
 		// Notifications dispatch (bot polls these via service-token)
 		r.Get("/notifications/due", func(w http.ResponseWriter, r *http.Request) { notificationsDue(svc, w, r) })
 		r.Post("/notifications/{id}/result", func(w http.ResponseWriter, r *http.Request) { notificationsResult(svc, w, r) })
+
+		// Coach broadcast notifications
+		r.Post("/notifications/preview", func(w http.ResponseWriter, r *http.Request) { notificationsPreview(svc, w, r) })
+		r.Post("/notifications/send", func(w http.ResponseWriter, r *http.Request) { notificationsSend(svc, w, r) })
 
 		// Client -> coach contact (ТЗ §4)
 		r.Post("/messages/coach", func(w http.ResponseWriter, r *http.Request) { messageCoach(svc, w, r) })
@@ -210,6 +217,10 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 
 		// New client FAQ
 		r.Get("/faq", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, newClientFAQ))
+
+		// Daily attendance (date-based)
+		r.Get("/attendance/date/{date}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getDateAttendance))
+		r.Post("/attendance/date", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, saveDateAttendance))
 
 		// Wellbeing feedback
 		r.Post("/wellbeing", guard(svc, []domain.Role{domain.RoleClient}, submitWellbeing))

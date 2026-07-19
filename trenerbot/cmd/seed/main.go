@@ -99,63 +99,51 @@ func seedTestData(s *store.Store, coachUserID int64) {
 		fmt.Printf("Created client: %s (ID: %d)\n", c.FullName, id)
 	}
 
-	// Create lessons for today and next 7 days
-	today := time.Now()
-	for i := 0; i < 7; i++ {
-		date := today.AddDate(0, 0, i).Format("2006-01-02")
+	// Create lesson entries for today to end of current week (per athlete)
+	now := time.Now()
+	weekday := now.Weekday()
+	if weekday == time.Sunday {
+		weekday = 7
+	} else {
+		weekday = time.Monday - weekday + 7
+	}
+	endOfWeek := now.AddDate(0, 0, int(7-weekday))
+	for d := 0; d <= int(endOfWeek.Sub(now).Hours()/24); d++ {
+		date := now.AddDate(0, 0, d).Format("2006-01-02")
 
-		// Morning lesson
-		lesson1 := domain.Lesson{
-			Date:     date,
-			Time:     "09:00",
+		for j, clientID := range clientIDs {
+			timeStr := "09:00"
+			if j%2 == 1 {
+				timeStr = "10:00"
+			}
+			entry := domain.LessonEntry{
+				Date:     date,
+				Time:     timeStr,
+				ClientID: clientID,
+				CoachID:  &coach.ID,
+				Duration: 60,
+				Status:   domain.LessonPlanned,
+			}
+			id, _ := s.InsertLessonEntry(entry)
+			fmt.Printf("Created lesson entry: %s %s client=%d entry#%d\n", date, timeStr, clientID, id)
+		}
+	}
+
+	// Create historical (completed) entries for past days
+	pastDate := now.AddDate(0, 0, -3).Format("2006-01-02")
+	pastTimes := []string{"09:00", "10:00", "11:00"}
+	for i, clientID := range clientIDs[:3] {
+		entry := domain.LessonEntry{
+			Date:     pastDate,
+			Time:     pastTimes[i],
+			ClientID: clientID,
 			CoachID:  &coach.ID,
 			Duration: 60,
-			Status:   domain.LessonPlanned,
-			Location: strPtr("Зал А"),
-			Comment:  strPtr("Утренняя группа"),
+			Status:   domain.LessonDone,
 		}
-		id1, _ := s.CreateLesson(lesson1)
-
-		// Evening lesson
-		lesson2 := domain.Lesson{
-			Date:     date,
-			Time:     "19:00",
-			CoachID:  &coach.ID,
-			Duration: 90,
-			Status:   domain.LessonPlanned,
-			Location: strPtr("Зал Б"),
-			Comment:  strPtr("Вечерняя группа"),
-		}
-		id2, _ := s.CreateLesson(lesson2)
-
-		// Register clients for lessons (alternating)
-		for j, clientID := range clientIDs {
-			if (i+j)%2 == 0 {
-				s.SetAttendance(id1, clientID, false, nil)
-			}
-			if (i+j+1)%3 == 0 {
-				s.SetAttendance(id2, clientID, false, nil)
-			}
-		}
-
-		fmt.Printf("Created lessons for %s: #%d (09:00), #%d (19:00)\n", date, id1, id2)
+		id, _ := s.InsertLessonEntry(entry)
+		fmt.Printf("Created past lesson entry: %s %s client=%d entry#%d\n", pastDate, pastTimes[i], clientID, id)
 	}
-
-	// Mark some attendance for past days (simulate history)
-	pastDate := today.AddDate(0, 0, -3).Format("2006-01-02")
-	pastLesson := domain.Lesson{
-		Date:     pastDate,
-		Time:     "10:00",
-		CoachID:  &coach.ID,
-		Duration: 60,
-		Status:   domain.LessonDone,
-		Location: strPtr("Зал А"),
-	}
-	pastLessonID, _ := s.CreateLesson(pastLesson)
-	for _, clientID := range clientIDs[:3] {
-		s.SetAttendance(pastLessonID, clientID, true, &coachUserID)
-	}
-	fmt.Printf("Created past lesson #%d with attendance\n", pastLessonID)
 
 	// Create waiting list entries
 	for i, clientID := range clientIDs[:2] {

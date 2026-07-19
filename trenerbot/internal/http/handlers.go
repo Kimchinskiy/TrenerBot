@@ -350,6 +350,36 @@ func uploadFile(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]any{"id": id, "path": dst})
 }
 
+// GET /api/schedule — returns lesson entries for the current week range.
+func scheduleHandler(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	from := q.Get("from")
+	to := q.Get("to")
+	if from == "" || to == "" {
+		writeError(w, http.StatusBadRequest, "from and to required")
+		return
+	}
+	u := UserFrom(r.Context())
+	var coachID, clientID int64
+	if u.Role == domain.RoleCoach {
+		co, err := svc.CoachByUser(u.ID)
+		if err == nil && co != nil {
+			coachID = co.ID
+		}
+	} else if u.Role == domain.RoleClient {
+		c, err := svc.Store.ClientByUserID(u.ID)
+		if err == nil && c != nil {
+			clientID = c.ID
+		}
+	}
+	entries, err := svc.GetSchedule(from, to, u.Role, u.ID, coachID, clientID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, entries)
+}
+
 func getReport(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	from := q.Get("from")

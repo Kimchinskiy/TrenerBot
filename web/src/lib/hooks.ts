@@ -17,6 +17,14 @@ export function useSchedule(from: string, to: string) {
   })
 }
 
+export function useScheduleWeek(from: string, to: string) {
+  return useQuery({
+    queryKey: ['schedule', from, to],
+    queryFn: () => endpoints.schedule(from, to),
+    enabled: !!from && !!to,
+  })
+}
+
 export function useAttendance(lessonId: number) {
   return useQuery({
     queryKey: ['attendance', lessonId],
@@ -92,5 +100,22 @@ export function useFaq(q: string) {
     queryKey: ['faq', q],
     queryFn: () => endpoints.faq(q),
     enabled: q.trim().length > 0,
+  })
+}
+
+export function useDateAttendance(date: string) {
+  return useQuery({
+    queryKey: ['dateAttendance', date],
+    queryFn: () => endpoints.dateAttendance(date),
+    enabled: !!date,
+  })
+}
+
+export function useSaveDateAttendance() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (vars: { date: string; entries: { client_id: number; present: boolean }[] }) =>
+      endpoints.saveDateAttendance(vars.date, vars.entries),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['dateAttendance', vars.date] }),
   })
 }

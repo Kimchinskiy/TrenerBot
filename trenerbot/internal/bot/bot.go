@@ -794,6 +794,13 @@ func renderNotification(n domain.Notification) string {
 		return fmt.Sprintf("⏰ Напоминание: сегодня тренировка в %v (%v)", p["time"], orEmpty(p["location"]))
 	case "lesson_canceled":
 		return fmt.Sprintf("❌ Тренировка %v %v отменена", p["date"], p["time"])
+	case "coach_broadcast":
+		title, _ := p["title"].(string)
+		text, _ := p["text"].(string)
+		if title != "" {
+			return fmt.Sprintf("📢 %s\n\n%s", title, text)
+		}
+		return text
 	default:
 		return fmt.Sprintf("Уведомление: %s", n.Type)
 	}

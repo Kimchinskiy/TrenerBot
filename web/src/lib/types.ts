@@ -10,6 +10,17 @@ export interface Lesson {
   group_id?: number | null
 }
 
+export interface ScheduleEntry {
+  id: number
+  date: string
+  time: string
+  client_id: number
+  client_name: string
+  coach_id?: number | null
+  duration: number
+  status: string
+}
+
 export interface Client {
   id: number
   user_id?: number | null
@@ -85,3 +96,39 @@ export interface AuthTokens {
 }
 
 export type Role = MeResult['role']
+
+export interface Recipient {
+  client_id: number
+  full_name: string
+  user_id: number | null
+}
+
+export interface NotificationPreview {
+  total: number
+  recipients: Recipient[]
+}
+
+export interface SendResult {
+  total: number
+  enqueued: number
+  skipped: number
+  errors: number
+}
+
+export interface DateAttendanceClient {
+  client_id: number
+  full_name: string
+  time: string
+  present: boolean | null
+  photo?: string | null
+}
+
+export interface DateAttendanceResponse {
+  date: string
+  clients: DateAttendanceClient[]
+}
+
+export interface SaveAttendanceEntry {
+  client_id: number
+  present: boolean
+}

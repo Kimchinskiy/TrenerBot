@@ -11,6 +11,6 @@ export * from './avatar'
 export * from './navigation-menu'
 export * from './dropdown-menu'
 export * from './collapsible'
-export * from './floating-nav'
 export * from './floating-navbar'
-export * from './navbars'
+export * from './switch'
+

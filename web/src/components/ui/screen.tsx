@@ -1,12 +1,13 @@
 import { cn } from '@/lib/utils'
+import { ChevronLeft, Loader2, AlertCircle } from 'lucide-react'
 export { Card, CardHeader, CardContent } from './card'
 export { Button } from './button'
 
 export function Spinner({ label, className }: { label?: string; className?: string }) {
   return (
-    <div className={cn('flex flex-col items-center justify-center gap-3 py-10 text-tg-hint', className)}>
-      <div className="h-7 w-7 animate-spin rounded-full border-2 border-tg-hint border-t-transparent" />
-      {label && <span className="text-sm">{label}</span>}
+    <div className={cn('flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground', className)}>
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      {label && <span className="text-sm font-medium">{label}</span>}
     </div>
   )
 }
@@ -21,33 +22,46 @@ export function ScreenHeader({
   onBack?: () => void
 }) {
   return (
-    <div className="px-4 pb-3 pt-5">
+    <div className="px-4 pb-4 pt-6 flex flex-col gap-1.5">
       {onBack && (
-        <button onClick={onBack} className="mb-1 text-sm text-tg-link">
-          ← Назад
+        <button
+          onClick={onBack}
+          className="mb-1 -ml-1 text-sm font-semibold text-primary inline-flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all self-start"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          <span>Назад</span>
         </button>
       )}
-      <h1 className="text-2xl font-bold text-tg-text">{title}</h1>
-      {subtitle && <p className="mt-1 text-sm text-tg-hint">{subtitle}</p>}
+      <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
+      {subtitle && <p className="text-sm font-medium text-muted-foreground">{subtitle}</p>}
     </div>
   )
 }
 
 export function Empty({ text }: { text: string }) {
-  return <div className="px-4 py-10 text-center text-sm text-tg-hint">{text}</div>
+  return (
+    <div className="px-6 py-12 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-border bg-card/30 backdrop-blur-sm">
+      <p className="text-sm font-semibold text-muted-foreground">{text}</p>
+    </div>
+  )
 }
 
 export function ErrorBox({ error }: { error: unknown }) {
   const msg = error instanceof Error ? error.message : 'Произошла ошибка'
-  return <div className="mx-4 my-3 rounded-xl bg-red-500/15 p-3 text-sm text-red-300">{msg}</div>
+  return (
+    <div className="mx-4 my-4 rounded-xl border border-destructive/20 bg-destructive/10 p-4 flex gap-3 text-sm text-destructive-foreground">
+      <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
+      <span className="font-medium">{msg}</span>
+    </div>
+  )
 }
 
 export function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
-    <div className="flex justify-between gap-4 py-1 text-sm">
-      <span className="text-tg-hint">{label}</span>
-      <span className="text-right text-tg-text">{value}</span>
+    <div className="flex justify-between gap-4 py-2 border-b border-border/40 last:border-b-0 text-sm">
+      <span className="font-semibold text-muted-foreground">{label}</span>
+      <span className="text-right font-medium text-foreground">{value}</span>
     </div>
   )
 }

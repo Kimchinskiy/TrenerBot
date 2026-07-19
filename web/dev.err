@@ -1,0 +1,241 @@
+ ⨯ ReferenceError: InstallPrompt is not defined
+    at RootLayout (src\app\layout.tsx:36:14)
+  34 |             <ApplyTheme />
+  35 |             {children}
+> 36 |             <InstallPrompt />
+     |              ^
+  37 |           </AuthProvider>
+  38 |         </Providers>
+  39 |       </body> {
+  digest: '4081155017'
+}
+ ⨯ ReferenceError: InstallPrompt is not defined
+    at RootLayout (src\app\layout.tsx:36:14)
+  34 |             <ApplyTheme />
+  35 |             {children}
+> 36 |             <InstallPrompt />
+     |              ^
+  37 |           </AuthProvider>
+  38 |         </Providers>
+  39 |       </body> {
+  digest: '4081155017'
+}
+ ⨯ ReferenceError: InstallPrompt is not defined
+    at RootLayout (src\app\layout.tsx:34:14)
+  32 |             <ApplyTheme />
+  33 |             {children}
+> 34 |             <InstallPrompt />
+     |              ^
+  35 |           </AuthProvider>
+  36 |         </Providers>
+  37 |       </body> {
+  digest: '4081155017'
+}
+ ⨯ Error: Could not find the module "D:\Projects\trenerbot-tmp\web\node_modules\next\dist\next-devtools\userspace\app\segment-explorer-node.js#SegmentViewNode" in the React Client Manifest. This is probably a bug in the React Server Components bundler.
+    at stringify (<anonymous>) {
+  digest: '249883701'
+}
+ ⨯ Error: Cannot find module './780.js'
+Require stack:
+- D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+- D:\Projects\trenerbot-tmp\web\.next\server\app\dashboard\schedule\page.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\swc\options.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\swc\index.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\analysis\parse-module.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\analysis\get-page-static-info.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\lib\router-server.js
+- D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (D:\Projects\trenerbot-tmp\web\.next\server\app\dashboard\page.js:2:8263)
+    at Object.<anonymous> (D:\Projects\trenerbot-tmp\web\.next\server\app\dashboard\page.js:2:8317) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/dashboard'
+}
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'D:\pagefile.sys'
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'D:\pagefile.sys'
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.]
+ ⨯ [Error [InvariantError]: Invariant: Expected clientReferenceManifest to be defined. This is a bug in Next.js.] {
+  page: '/'
+}
+ ⨯ [Error: ENOENT: no such file or directory, open 'D:\Projects\trenerbot-tmp\web\.next\server\pages\_document.js'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'open',
+  path: 'D:\\Projects\\trenerbot-tmp\\web\\.next\\server\\pages\\_document.js'
+}
+Watchpack Error (initial scan): Error: EINVAL: invalid argument, lstat 'D:\pagefile.sys'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, lstat 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\clsx.js'
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/clsx' in D:\Projects\trenerbot-tmp\web\.next\server for build dependencies doesn't lead to expected result 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\clsx.js', but to 'Error: Can't resolve './vendor-chunks/clsx' in 'D:\Projects\trenerbot-tmp\web\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/clsx (expected D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\clsx.js)
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at resolve esm file next-pwa
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at file D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at resolve commonjs D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/class-variance-authority' in D:\Projects\trenerbot-tmp\web\.next\server for build dependencies doesn't lead to expected result 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\class-variance-authority.js', but to 'Error: Can't resolve './vendor-chunks/class-variance-authority' in 'D:\Projects\trenerbot-tmp\web\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/class-variance-authority (expected D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\class-variance-authority.js)
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at resolve esm file next-pwa
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at file D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at resolve commonjs D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/tailwind-merge' in D:\Projects\trenerbot-tmp\web\.next\server for build dependencies doesn't lead to expected result 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\tailwind-merge.js', but to 'Error: Can't resolve './vendor-chunks/tailwind-merge' in 'D:\Projects\trenerbot-tmp\web\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/tailwind-merge (expected D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\tailwind-merge.js)
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at resolve esm file next-pwa
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at file D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at resolve commonjs D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/@tanstack' in D:\Projects\trenerbot-tmp\web\.next\server for build dependencies doesn't lead to expected result 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\@tanstack.js', but to 'Error: Can't resolve './vendor-chunks/@tanstack' in 'D:\Projects\trenerbot-tmp\web\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/@tanstack (expected D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\@tanstack.js)
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at resolve esm file next-pwa
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at file D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at resolve commonjs D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w> [webpack.cache.PackFileCacheStrategy/webpack.FileSystemInfo] Resolving './vendor-chunks/@radix-ui' in D:\Projects\trenerbot-tmp\web\.next\server for build dependencies doesn't lead to expected result 'D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\@radix-ui.js', but to 'Error: Can't resolve './vendor-chunks/@radix-ui' in 'D:\Projects\trenerbot-tmp\web\.next\server'' instead. Resolving dependencies are ignored for this path.
+<w>  at resolve commonjs file ./vendor-chunks/@radix-ui (expected D:\Projects\trenerbot-tmp\web\.next\server\vendor-chunks\@radix-ui.js)
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\webpack-runtime.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file D:\Projects\trenerbot-tmp\web\.next\server\app\page.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\require.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\server\load-components.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\utils.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\build\webpack\loaders\next-route-loader\index.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\bundle5.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next\dist\compiled\webpack\webpack-lib.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\build-fallback-worker.js
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at file D:\Projects\trenerbot-tmp\web\node_modules\next-pwa\index.js
+<w>  at resolve esm file next-pwa
+<w>  at file dependencies D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at file D:\Projects\trenerbot-tmp\web\next.config.mjs
+<w>  at resolve commonjs D:\Projects\trenerbot-tmp\web\next.config.mjs
+[Error: ENOENT: no such file or directory, stat 'D:\Projects\trenerbot-tmp\web\.next\cache\webpack\server-development\9.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\Projects\\trenerbot-tmp\\web\\.next\\cache\\webpack\\server-development\\9.pack.gz'
+}
+ ⨯ unhandledRejection: [Error: ENOENT: no such file or directory, stat 'D:\Projects\trenerbot-tmp\web\.next\cache\webpack\server-development\9.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\Projects\\trenerbot-tmp\\web\\.next\\cache\\webpack\\server-development\\9.pack.gz'
+}
+ ⨯ unhandledRejection:  [Error: ENOENT: no such file or directory, stat 'D:\Projects\trenerbot-tmp\web\.next\cache\webpack\server-development\9.pack.gz'] {
+  errno: -4058,
+  code: 'ENOENT',
+  syscall: 'stat',
+  path: 'D:\\Projects\\trenerbot-tmp\\web\\.next\\cache\\webpack\\server-development\\9.pack.gz'
+}
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, stat 'D:\Projects\trenerbot-tmp\web\.next\cache\webpack\server-development\9.pack.gz'

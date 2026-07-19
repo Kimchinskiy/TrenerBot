@@ -5,6 +5,7 @@ import ContactScreen from '@/features/more/contact-screen'
 import DebtorsScreen from '@/features/more/debtors-screen'
 import WaitingListScreen from '@/features/more/waiting-list-screen'
 import SocialScreen from '@/features/more/social-screen'
+import NotificationScreen from '@/features/more/notification-screen'
 import type { ExtraScreen } from '@/features/more/more-screen'
 
 const SCREENS: Record<ExtraScreen, React.ComponentType> = {
@@ -14,6 +15,7 @@ const SCREENS: Record<ExtraScreen, React.ComponentType> = {
   debtors: DebtorsScreen,
   waiting: WaitingListScreen,
   social: SocialScreen,
+  notifications: NotificationScreen,
 }
 
 export default async function MoreScreenPage({ params }: { params: Promise<{ screen: string }> }) {

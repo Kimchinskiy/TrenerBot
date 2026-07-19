@@ -7,6 +7,12 @@ import type {
   WellbeingEntry,
   Client,
   AuthTokens,
+  ScheduleEntry,
+  Recipient,
+  NotificationPreview,
+  SendResult,
+  DateAttendanceResponse,
+  SaveAttendanceEntry,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -132,6 +138,21 @@ async function request<T>(path: string, options: RequestInit = {}, retry = true)
 export const api = {
   base: API_BASE,
 
+  // --- Notifications (coach broadcast) ---
+
+  notificationsPreview(body: { filter: string; group_id?: number; client_ids?: number[] }) {
+    return request<NotificationPreview>('/notifications/preview', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+  notificationsSend(body: { filter: string; group_id?: number; client_ids?: number[]; title: string; text: string }) {
+    return request<SendResult>('/notifications/send', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    })
+  },
+
   // Website auth (primary): phone + password.
   register(phone: string, password: string, firstName: string, lastName: string) {
     return request<AuthTokens>('/auth/register', {
@@ -172,6 +193,7 @@ export const api = {
 export const endpoints = {
   me: () => request<MeResult>('/clients/me'),
   lessons: (from: string, to: string) => request<Lesson[]>(`/lessons?from=${from}&to=${to}`),
+  schedule: (from: string, to: string) => request<ScheduleEntry[]>(`/schedule?from=${from}&to=${to}`),
   attendance: (lessonId: number) => request<Attendance[]>(`/lessons/${lessonId}/attendance`),
   markAttendance: (lessonId: number, clientId: number, present: boolean) =>
     request<{ status: string }>(`/lessons/${lessonId}/attendance`, {
@@ -197,4 +219,10 @@ export const endpoints = {
   socialMedia: () => request<Record<string, string>>('/social-media'),
   clients: () => request<Client[]>('/clients'),
   faq: (q: string) => request<{ answer: string }>(`/faq?q=${encodeURIComponent(q)}`),
+  dateAttendance: (date: string) => request<DateAttendanceResponse>(`/attendance/date/${date}`),
+  saveDateAttendance: (date: string, entries: SaveAttendanceEntry[]) =>
+    request<{ status: string }>('/attendance/date', {
+      method: 'POST',
+      body: JSON.stringify({ date, entries }),
+    }),
 }
