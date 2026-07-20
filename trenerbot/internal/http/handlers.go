@@ -398,6 +398,47 @@ func getReport(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, rep)
 }
 
+// ---- Schedule Entry CRUD ----
+
+func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	u := UserFrom(r.Context())
+	co, err := svc.CoachByUser(u.ID)
+	if err != nil || co == nil {
+		writeError(w, http.StatusForbidden, "coach only")
+		return
+	}
+	var body struct {
+		ClientID int64  `json:"client_id"`
+		Date     string `json:"date"`
+		Time     string `json:"time"`
+		Duration int    `json:"duration"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if body.ClientID == 0 || body.Date == "" || body.Time == "" {
+		writeError(w, http.StatusBadRequest, "client_id, date, time required")
+		return
+	}
+	if body.Duration <= 0 {
+		body.Duration = 60
+	}
+	id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
+		Date:     body.Date,
+		Time:     body.Time,
+		ClientID: body.ClientID,
+		CoachID:  &co.ID,
+		Duration: body.Duration,
+		Status:   domain.LessonPlanned,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+}
+
 // ---- Waiting List ----
 
 func waitingList(svc *service.Services, w http.ResponseWriter, r *http.Request) {
@@ -481,7 +522,53 @@ func debtorsWidget(svc *service.Services, w http.ResponseWriter, r *http.Request
 // ---- Social Media ----
 
 func socialMediaLinks(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	u := UserFrom(r.Context())
+	if u != nil {
+		co, err := svc.CoachByUser(u.ID)
+		if err == nil && co != nil {
+			links := svc.GetSocialLinksMap(co.ID)
+			if len(links) > 0 {
+				writeJSON(w, http.StatusOK, links)
+				return
+			}
+		}
+	}
 	writeJSON(w, http.StatusOK, svc.SocialMediaLinks())
+}
+
+func saveSocialLinks(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	u := UserFrom(r.Context())
+	co, err := svc.CoachByUser(u.ID)
+	if err != nil || co == nil {
+		writeError(w, http.StatusForbidden, "coach only")
+		return
+	}
+	coachID := co.ID
+	var body struct {
+		Links []struct {
+			Platform string  `json:"platform"`
+			URL      *string `json:"url"`
+			Enabled  bool    `json:"enabled"`
+		} `json:"links"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	domainLinks := make([]domain.SocialLink, len(body.Links))
+	for i, l := range body.Links {
+		domainLinks[i] = domain.SocialLink{
+			CoachID:  coachID,
+			Platform: l.Platform,
+			URL:      l.URL,
+			Enabled:  l.Enabled,
+		}
+	}
+	if err := svc.SaveSocialLinks(coachID, domainLinks); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // ---- New Client FAQ ----

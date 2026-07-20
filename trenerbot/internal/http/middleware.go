@@ -178,6 +178,7 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 
 		// Schedule (new model — lesson entries per athlete)
 		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) { scheduleHandler(svc, w, r) })
+		r.Post("/schedule", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createScheduleEntry))
 
 		// Files
 		r.Post("/files", func(w http.ResponseWriter, r *http.Request) { uploadFile(svc, w, r) })
@@ -213,7 +214,8 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Get("/debtors", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, debtorsWidget))
 
 		// Social media links
-		r.Get("/social-media", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, socialMediaLinks))
+		r.Get("/social-media", func(w http.ResponseWriter, r *http.Request) { socialMediaLinks(svc, w, r) })
+		r.Post("/social-media", func(w http.ResponseWriter, r *http.Request) { saveSocialLinks(svc, w, r) })
 
 		// New client FAQ
 		r.Get("/faq", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, newClientFAQ))
@@ -225,6 +227,20 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		// Wellbeing feedback
 		r.Post("/wellbeing", guard(svc, []domain.Role{domain.RoleClient}, submitWellbeing))
 		r.Get("/wellbeing/{client_id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, wellbeingHistory))
+
+		// Coach subscription & onboarding
+		r.Get("/coach/onboarding", func(w http.ResponseWriter, r *http.Request) { getCoachOnboarding(svc, w, r) })
+		r.Post("/coach/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToCoach(svc, w, r) })
+		r.Get("/coach/subscription", func(w http.ResponseWriter, r *http.Request) { getCoachSubscription(svc, w, r) })
+		r.Post("/coach/subscription/trial", func(w http.ResponseWriter, r *http.Request) { startCoachTrial(svc, w, r) })
+		r.Post("/coach/subscription/activate", func(w http.ResponseWriter, r *http.Request) { activateCoachSubscription(svc, w, r) })
+
+		// Parent features
+		r.Post("/parent/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToParent(svc, w, r) })
+		r.Post("/parent/link", func(w http.ResponseWriter, r *http.Request) { linkChild(svc, w, r) })
+		r.Get("/parent/children/status", func(w http.ResponseWriter, r *http.Request) { getChildrenStatus(svc, w, r) })
+		r.Get("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getParentNotifPrefs(svc, w, r) })
+		r.Post("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveParentNotifPrefs(svc, w, r) })
 	})
 
 	return r

@@ -4,12 +4,14 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-provider'
 import FloatingNavbar, { type FloatingNavItem } from '@/components/ui/floating-navbar'
-import { CalendarDays, User, MoreHorizontal } from 'lucide-react'
+import { CalendarDays, User, MoreHorizontal, Heart } from 'lucide-react'
+import { useMe } from '@/lib/hooks'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { status } = useAuth()
   const router = useRouter()
   const pathname = usePathname()
+  const { data: me } = useMe()
 
   useEffect(() => {
     if (status === 'guest') router.replace('/login')
@@ -25,8 +27,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const items: FloatingNavItem[] = [
     {
-      label: 'Расписание',
-      icon: <CalendarDays className="h-5 w-5" />,
+      label: me?.role === 'parent' ? 'Дети' : 'Расписание',
+      icon: me?.role === 'parent' ? <Heart className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />,
       href: '/dashboard/schedule',
     },
     {

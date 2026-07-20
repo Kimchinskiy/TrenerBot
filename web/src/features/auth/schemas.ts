@@ -3,7 +3,8 @@ import { z } from 'zod'
 export const phoneSchema = z
   .string()
   .min(1, 'Введите телефон')
-  .refine((v) => /^\+?\d[\d\s()-]{9,}$/.test(v.trim()), 'Некорректный номер телефона')
+  .max(12, 'Номер должен быть 11 цифр')
+  .refine((v) => /^(\+7|8)\d{10}$/.test(v.trim().replace(/\s|-|\(|\)/g, '')), 'Некорректный номер. Формат: +7 XXX XXX XX XX')
 
 export const passwordSchema = z
   .string()

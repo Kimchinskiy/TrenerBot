@@ -13,6 +13,11 @@ import type {
   SendResult,
   DateAttendanceResponse,
   SaveAttendanceEntry,
+  CoachOnboarding,
+  CoachSubscription,
+  ChildLessonStatus,
+  ParentNotifPref,
+  SocialLink,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -194,6 +199,32 @@ export const endpoints = {
   me: () => request<MeResult>('/clients/me'),
   lessons: (from: string, to: string) => request<Lesson[]>(`/lessons?from=${from}&to=${to}`),
   schedule: (from: string, to: string) => request<ScheduleEntry[]>(`/schedule?from=${from}&to=${to}`),
+
+  // Coach
+  coachOnboarding: () => request<CoachOnboarding>('/coach/onboarding'),
+  upgradeToCoach: (fullName: string, sport: string) =>
+    request<{ status: string; role: string; coach_id: number }>('/coach/upgrade', {
+      method: 'POST', body: JSON.stringify({ full_name: fullName, sport }),
+    }),
+  coachSubscription: () => request<{ subscription: CoachSubscription; active: boolean }>('/coach/subscription'),
+  startCoachTrial: () => request<{ status: string; subscription: CoachSubscription }>('/coach/subscription/trial', { method: 'POST' }),
+  activateCoachSubscription: (days: number) =>
+    request<{ status: string; subscription: CoachSubscription }>('/coach/subscription/activate', {
+      method: 'POST', body: JSON.stringify({ days }),
+    }),
+
+  // Parent
+  upgradeToParent: () => request<{ status: string; role: string }>('/parent/upgrade', { method: 'POST' }),
+  linkChild: (fullName: string, birthDate: string) =>
+    request<{ status: string; child_id: number; child_name: string }>('/parent/link', {
+      method: 'POST', body: JSON.stringify({ full_name: fullName, birth_date: birthDate }),
+    }),
+  childrenLessonStatus: () => request<ChildLessonStatus[]>('/parent/children/status'),
+  parentNotifPrefs: () => request<ParentNotifPref[]>('/parent/notif-prefs'),
+  saveParentNotifPref: (pref: { child_id: number; lesson_start?: boolean; lesson_end_15?: boolean; lesson_missed?: boolean }) =>
+    request<{ status: string }>('/parent/notif-prefs', {
+      method: 'POST', body: JSON.stringify(pref),
+    }),
   attendance: (lessonId: number) => request<Attendance[]>(`/lessons/${lessonId}/attendance`),
   markAttendance: (lessonId: number, clientId: number, present: boolean) =>
     request<{ status: string }>(`/lessons/${lessonId}/attendance`, {
@@ -216,7 +247,13 @@ export const endpoints = {
       method: 'POST',
       body: JSON.stringify({ from, text }),
     }),
+  createScheduleEntry: (data: { client_id: number; date: string; time: string; duration?: number }) =>
+    request<{ id: number }>('/schedule', { method: 'POST', body: JSON.stringify(data) }),
   socialMedia: () => request<Record<string, string>>('/social-media'),
+  saveSocialLinks: (links: SocialLink[]) =>
+    request<{ status: string }>('/social-media', {
+      method: 'POST', body: JSON.stringify({ links }),
+    }),
   clients: () => request<Client[]>('/clients'),
   faq: (q: string) => request<{ answer: string }>(`/faq?q=${encodeURIComponent(q)}`),
   dateAttendance: (date: string) => request<DateAttendanceResponse>(`/attendance/date/${date}`),

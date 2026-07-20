@@ -197,6 +197,20 @@ func (c *Client) SearchClients(tgID, query string) ([]ClientListItem, error) {
 	return out, nil
 }
 
+// CoachSubscriptionResult holds the subscription status response.
+type CoachSubscriptionResult struct {
+	Subscription *domain.CoachSubscription `json:"subscription,omitempty"`
+	Active       bool                      `json:"active"`
+}
+
+func (c *Client) CheckCoachSubscription(tgID string) (*CoachSubscriptionResult, error) {
+	var out CoachSubscriptionResult
+	if err := c.do(http.MethodGet, "/api/coach/subscription", tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // UploadFile sends a local file to the backend.
 func (c *Client) UploadFile(tgID, ownerType string, ownerID int64, kind, path string) (int64, error) {
 	f, err := os.Open(path)

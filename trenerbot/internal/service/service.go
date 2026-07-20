@@ -619,6 +619,36 @@ func (s *Services) SaveDateAttendance(date string, entries []domain.DailyAttenda
 	return s.Store.SaveDailyAttendance(date, entries)
 }
 
+func (s *Services) GetSocialLinks(coachID int64) ([]domain.SocialLink, error) {
+	if err := s.Store.SeedDefaultSocialLinks(coachID); err != nil {
+		return nil, err
+	}
+	return s.Store.ListSocialLinks(coachID)
+}
+
+func (s *Services) GetSocialLinksMap(coachID int64) map[string]string {
+	links, err := s.Store.ListSocialLinks(coachID)
+	if err != nil {
+		return map[string]string{}
+	}
+	m := make(map[string]string)
+	for _, l := range links {
+		if l.Enabled && l.URL != nil {
+			m[l.Platform] = *l.URL
+		}
+	}
+	return m
+}
+
+func (s *Services) SaveSocialLinks(coachID int64, links []domain.SocialLink) error {
+	for _, l := range links {
+		if err := s.Store.UpsertSocialLink(coachID, l.Platform, l.URL, l.Enabled); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // SocialMediaLinks returns configured social media links for the club/coach.
 func (s *Services) SocialMediaLinks() map[string]string {
 	return map[string]string{
@@ -724,4 +754,145 @@ func randToken() string {
 	b := make([]byte, 16)
 	_, _ = rand.Read(b)
 	return hex.EncodeToString(b)
+}
+
+// ---------- Coach Subscriptions ----------
+
+const TrialDays = 7
+
+func (s *Services) GetOrCreateCoachSubscription(coachID int64) (*domain.CoachSubscription, error) {
+	sub, err := s.Store.CoachSubscriptionByCoachID(coachID)
+	if err != nil {
+		return nil, err
+	}
+	if sub == nil {
+		return s.Store.CreateCoachSubscription(coachID, TrialDays)
+	}
+	return sub, nil
+}
+
+func (s *Services) GetCoachSubscription(coachID int64) (*domain.CoachSubscription, error) {
+	return s.Store.CoachSubscriptionByCoachID(coachID)
+}
+
+func (s *Services) IsCoachSubscriptionActive(coachID int64) bool {
+	sub, err := s.Store.CoachSubscriptionByCoachID(coachID)
+	if err != nil || sub == nil {
+		return false
+	}
+	if sub.Status == domain.SubActive {
+		if sub.PaidUntil != nil {
+			paidUntil, err := time.Parse("2006-01-02 15:04:05", *sub.PaidUntil)
+			if err == nil && paidUntil.Before(time.Now()) {
+				return false
+			}
+		}
+		return true
+	}
+	if sub.Status == domain.SubTrial {
+		if sub.TrialEnd != nil {
+			trialEnd, err := time.Parse("2006-01-02 15:04:05", *sub.TrialEnd)
+			if err == nil && trialEnd.Before(time.Now()) {
+				_ = s.Store.UpdateCoachSubscriptionStatus(coachID, domain.SubExpired)
+				return false
+			}
+		}
+		return true
+	}
+	return false
+}
+
+// ---------- Parent features ----------
+
+func (s *Services) FindChildByBirthDate(fullName, birthDate string) (*domain.Client, error) {
+	return s.Store.ClientByBirthDate(fullName, birthDate)
+}
+
+func (s *Services) LinkParentToChild(parentUserID int64, childClientID int64) error {
+	return s.Store.LinkParentToChild(parentUserID, childClientID)
+}
+
+func (s *Services) GetParentNotifPrefs(parentUserID int64) ([]domain.ParentNotifPref, error) {
+	return s.Store.GetParentNotifPrefs(parentUserID)
+}
+
+func (s *Services) SaveParentNotifPrefs(pref domain.ParentNotifPref) error {
+	return s.Store.UpsertParentNotifPref(pref)
+}
+
+// GetChildLessonStatus returns lesson status info for a child for the parent dashboard.
+func (s *Services) GetChildLessonStatus(childID int64) (*domain.ChildLessonStatus, error) {
+	now := time.Now()
+	today := now.Format("2006-01-02")
+	currentTime := now.Format("15:04")
+
+	entries, err := s.Store.ListChildLessonEntries(childID, today, today)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := s.Store.ClientByID(childID)
+	if err != nil || client == nil {
+		return nil, fmt.Errorf("%w: child %d", ErrNotFound, childID)
+	}
+
+	status := &domain.ChildLessonStatus{
+		ClientID:       childID,
+		FullName:       client.FullName,
+		HasLessonToday: len(entries) > 0,
+	}
+
+	for _, e := range entries {
+		if status.Date == "" || e.Date > status.Date || (e.Date == status.Date && e.Time > status.Time) {
+			status.Date = e.Date
+			status.Time = e.Time
+			status.Duration = e.Duration
+			status.Status = string(e.Status)
+		}
+
+		if e.Date == today {
+			status.HasLessonToday = true
+			startTime, err := time.Parse("15:04", e.Time)
+			if err != nil {
+				continue
+			}
+			currentParsed, err := time.Parse("15:04", currentTime)
+			if err != nil {
+				continue
+			}
+			startMinutes := startTime.Hour()*60 + startTime.Minute()
+			currentMinutes := currentParsed.Hour()*60 + currentParsed.Minute()
+			endMinutes := startMinutes + e.Duration
+
+			if currentMinutes >= startMinutes && currentMinutes <= endMinutes {
+				left := endMinutes - currentMinutes
+				status.IsOngoing = true
+				status.MinutesLeft = &left
+			} else if currentMinutes < startMinutes {
+				until := startMinutes - currentMinutes
+				status.MinutesUntil = &until
+			}
+		}
+	}
+
+	status.IsToday = status.Date == today
+	return status, nil
+}
+
+// ---------- Lesson status for parent dashboard ----------
+
+func (s *Services) GetChildrenLessonStatuses(parentUserID int64) ([]domain.ChildLessonStatus, error) {
+	children, err := s.ChildrenOfParent(parentUserID)
+	if err != nil {
+		return nil, err
+	}
+	var out []domain.ChildLessonStatus
+	for _, ch := range children {
+		status, err := s.GetChildLessonStatus(ch.ID)
+		if err != nil {
+			continue
+		}
+		out = append(out, *status)
+	}
+	return out, nil
 }

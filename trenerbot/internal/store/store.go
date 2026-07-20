@@ -3,6 +3,7 @@ package store
 import (
 	"database/sql"
 	"log/slog"
+	"strconv"
 	"strings"
 	"time"
 
@@ -96,6 +97,12 @@ func (s *Store) UpdateUserProfile(u domain.User) error {
 	_, err := s.DB.Exec(`UPDATE users SET phone=?, password_hash=?, telegram_id=?, max_id=?,
 		first_name=?, last_name=?, avatar_url=?, role=?, updated_at=datetime('now') WHERE id=?`,
 		u.Phone, u.PasswordHash, u.TelegramID, u.MaxID, u.FirstName, u.LastName, u.AvatarURL, string(u.Role), u.ID)
+	return err
+}
+
+// UpdateUserRole updates only the role field for a user.
+func (s *Store) UpdateUserRole(id int64, role domain.Role) error {
+	_, err := s.DB.Exec(`UPDATE users SET role=?, updated_at=datetime('now') WHERE id=?`, string(role), id)
 	return err
 }
 
@@ -295,7 +302,7 @@ func (s *Store) UpdateClient(c domain.Client) error {
 }
 
 func (s *Store) ListClients() ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients ORDER BY full_name`)
+	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL AND full_name != '/menu' AND id IN (SELECT MIN(id) FROM clients GROUP BY full_name) ORDER BY full_name`)
 	if err != nil {
 		return nil, err
 	}
@@ -880,4 +887,191 @@ func boolToInt(b bool) int {
 		return 1
 	}
 	return 0
+}
+
+// ---------- Coach Subscriptions ----------
+
+func (s *Store) CreateCoachSubscription(coachID int64, trialDays int) (*domain.CoachSubscription, error) {
+	trialEnd := time.Now().AddDate(0, 0, trialDays).Format("2006-01-02 15:04:05")
+	_, err := s.DB.Exec(`INSERT INTO coach_subscriptions(coach_id, status, trial_end) VALUES (?, 'trial', ?)`, coachID, trialEnd)
+	if err != nil {
+		return nil, err
+	}
+	return s.CoachSubscriptionByCoachID(coachID)
+}
+
+func (s *Store) CoachSubscriptionByCoachID(coachID int64) (*domain.CoachSubscription, error) {
+	sub := &domain.CoachSubscription{}
+	var trialEnd, paidUntil, updated sql.NullString
+	err := s.DB.QueryRow(`SELECT id, coach_id, status, trial_start, trial_end, paid_until, created_at, updated_at
+		FROM coach_subscriptions WHERE coach_id = ?`, coachID).
+		Scan(&sub.ID, &sub.CoachID, &sub.Status, &sub.TrialStart, &trialEnd, &paidUntil, &sub.CreatedAt, &updated)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	if trialEnd.Valid {
+		sub.TrialEnd = &trialEnd.String
+	}
+	if paidUntil.Valid {
+		sub.PaidUntil = &paidUntil.String
+	}
+	if updated.Valid {
+		sub.UpdatedAt = &updated.String
+	}
+	return sub, nil
+}
+
+func (s *Store) UpdateCoachSubscriptionStatus(coachID int64, status domain.SubscriptionStatus) error {
+	_, err := s.DB.Exec(`UPDATE coach_subscriptions SET status=?, updated_at=datetime('now') WHERE coach_id=?`, string(status), coachID)
+	return err
+}
+
+func (s *Store) ExtendCoachSubscription(coachID int64, days int) error {
+	_, err := s.DB.Exec(`UPDATE coach_subscriptions SET paid_until=datetime('now', ?), status='active', updated_at=datetime('now') WHERE coach_id=?`,
+		"+"+strconv.Itoa(days)+" days", coachID)
+	return err
+}
+
+// ---------- Parent features ----------
+
+func (s *Store) ClientByBirthDate(fullName, birthDate string) (*domain.Client, error) {
+	c := &domain.Client{}
+	var birth, photo, phone, tg, wa, email, med, note, reg, src, botAccess, subEnds sql.NullString
+	var userID, age, parentID, secondParentID sql.NullInt64
+	err := s.DB.QueryRow(`SELECT id, user_id, full_name, photo, birth_date, age, phone, telegram, whatsapp,
+		parent_id, second_parent_id, email, medical_limits, note, status, registered_at, source, bot_access, subscription_ends_at
+		FROM clients WHERE full_name = ? AND birth_date = ?`, fullName, birthDate).
+		Scan(&c.ID, &userID, &c.FullName, &photo, &birth, &age, &phone, &tg, &wa,
+			&parentID, &secondParentID, &email, &med, &note, &c.Status, &reg, &src, &botAccess, &subEnds)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	assignNulls(c, photo, birth, age, phone, tg, wa, parentID, secondParentID, email, med, note, reg, src, botAccess, subEnds)
+	return c, nil
+}
+
+func (s *Store) LinkParentToChild(parentUserID int64, childClientID int64) error {
+	var currentParentID, currentSecondParentID sql.NullInt64
+	err := s.DB.QueryRow(`SELECT parent_id, second_parent_id FROM clients WHERE id = ?`, childClientID).Scan(&currentParentID, &currentSecondParentID)
+	if err != nil {
+		return err
+	}
+	if currentParentID.Valid && currentParentID.Int64 == parentUserID {
+		return nil
+	}
+	if currentSecondParentID.Valid && currentSecondParentID.Int64 == parentUserID {
+		return nil
+	}
+	if !currentParentID.Valid {
+		_, err = s.DB.Exec(`UPDATE clients SET parent_id = ? WHERE id = ?`, parentUserID, childClientID)
+	} else if !currentSecondParentID.Valid {
+		_, err = s.DB.Exec(`UPDATE clients SET second_parent_id = ? WHERE id = ?`, parentUserID, childClientID)
+	}
+	return err
+}
+
+func (s *Store) ListChildLessonEntries(childID int64, from, to string) ([]domain.ScheduleEntry, error) {
+	return s.ListScheduleEntries(from, to, 0, childID)
+}
+
+func (s *Store) UpsertParentNotifPref(pref domain.ParentNotifPref) error {
+	_, err := s.DB.Exec(`INSERT INTO parent_notification_prefs(parent_user_id, child_id, lesson_start, lesson_end_15, lesson_missed)
+		VALUES (?,?,?,?,?)
+		ON CONFLICT(parent_user_id, child_id) DO UPDATE SET
+		lesson_start=excluded.lesson_start, lesson_end_15=excluded.lesson_end_15, lesson_missed=excluded.lesson_missed`,
+		pref.ParentUserID, pref.ChildID, boolToInt(pref.LessonStart), boolToInt(pref.LessonEnd15), boolToInt(pref.LessonMissed))
+	return err
+}
+
+func (s *Store) GetParentNotifPrefs(parentUserID int64) ([]domain.ParentNotifPref, error) {
+	rows, err := s.DB.Query(`SELECT id, parent_user_id, child_id, lesson_start, lesson_end_15, lesson_missed
+		FROM parent_notification_prefs WHERE parent_user_id = ?`, parentUserID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.ParentNotifPref
+	for rows.Next() {
+		var p domain.ParentNotifPref
+		var start, end15, missed int
+		if err := rows.Scan(&p.ID, &p.ParentUserID, &p.ChildID, &start, &end15, &missed); err != nil {
+			return nil, err
+		}
+		p.LessonStart = start == 1
+		p.LessonEnd15 = end15 == 1
+		p.LessonMissed = missed == 1
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// ---------- Coach Social Links ----------
+
+func (s *Store) ListSocialLinks(coachID int64) ([]domain.SocialLink, error) {
+	rows, err := s.DB.Query(`SELECT id, coach_id, platform, url, enabled FROM coach_social_links WHERE coach_id = ? ORDER BY platform`, coachID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.SocialLink
+	for rows.Next() {
+		var l domain.SocialLink
+		var url sql.NullString
+		var enabled int
+		if err := rows.Scan(&l.ID, &l.CoachID, &l.Platform, &url, &enabled); err != nil {
+			return nil, err
+		}
+		if url.Valid {
+			l.URL = &url.String
+		}
+		l.Enabled = enabled == 1
+		out = append(out, l)
+	}
+	return out, nil
+}
+
+func (s *Store) UpsertSocialLink(coachID int64, platform string, url *string, enabled bool) error {
+	_, err := s.DB.Exec(`INSERT INTO coach_social_links(coach_id, platform, url, enabled, updated_at) VALUES (?,?,?,?,datetime('now'))
+		ON CONFLICT(coach_id, platform) DO UPDATE SET url=excluded.url, enabled=excluded.enabled, updated_at=excluded.updated_at`,
+		coachID, platform, url, boolToInt(enabled))
+	return err
+}
+
+func (s *Store) SeedDefaultSocialLinks(coachID int64) error {
+	platforms := []string{"instagram", "telegram", "vk", "youtube", "whatsapp"}
+	for _, p := range platforms {
+		_, err := s.DB.Exec(`INSERT OR IGNORE INTO coach_social_links(coach_id, platform) VALUES (?,?)`, coachID, p)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Store) ListParentUserIDsByChildID(childID int64) ([]int64, error) {
+	rows, err := s.DB.Query(`SELECT parent_id, second_parent_id FROM clients WHERE id = ? AND (parent_id IS NOT NULL OR second_parent_id IS NOT NULL)`, childID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var p1, p2 sql.NullInt64
+		if err := rows.Scan(&p1, &p2); err != nil {
+			return nil, err
+		}
+		if p1.Valid {
+			out = append(out, p1.Int64)
+		}
+		if p2.Valid {
+			out = append(out, p2.Int64)
+		}
+	}
+	return out, nil
 }

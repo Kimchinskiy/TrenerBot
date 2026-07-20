@@ -193,3 +193,54 @@ type Recipient struct {
 	FullName string `json:"full_name"`
 	UserID   *int64 `json:"user_id"`
 }
+
+type SubscriptionStatus string
+
+const (
+	SubTrial   SubscriptionStatus = "trial"
+	SubActive  SubscriptionStatus = "active"
+	SubExpired SubscriptionStatus = "expired"
+	SubCanceled SubscriptionStatus = "canceled"
+)
+
+type CoachSubscription struct {
+	ID        int64              `json:"id"`
+	CoachID   int64              `json:"coach_id"`
+	Status    SubscriptionStatus `json:"status"`
+	TrialStart string            `json:"trial_start"`
+	TrialEnd  *string            `json:"trial_end,omitempty"`
+	PaidUntil *string            `json:"paid_until,omitempty"`
+	CreatedAt string             `json:"created_at"`
+	UpdatedAt *string            `json:"updated_at,omitempty"`
+}
+
+type SocialLink struct {
+	ID       int64  `json:"id"`
+	CoachID  int64  `json:"coach_id"`
+	Platform string `json:"platform"`
+	URL      *string `json:"url,omitempty"`
+	Enabled  bool   `json:"enabled"`
+}
+
+type ParentNotifPref struct {
+	ID           int64 `json:"id"`
+	ParentUserID int64 `json:"parent_user_id"`
+	ChildID      int64 `json:"child_id"`
+	LessonStart  bool  `json:"lesson_start"`
+	LessonEnd15  bool  `json:"lesson_end_15"`
+	LessonMissed bool  `json:"lesson_missed"`
+}
+
+type ChildLessonStatus struct {
+	ClientID       int64  `json:"client_id"`
+	FullName       string `json:"full_name"`
+	Date           string `json:"date"`
+	Time           string `json:"time"`
+	Duration       int    `json:"duration"`
+	Status         string `json:"status"`
+	IsToday        bool   `json:"is_today"`
+	IsOngoing      bool   `json:"is_ongoing"`
+	MinutesLeft    *int   `json:"minutes_left,omitempty"`
+	MinutesUntil   *int   `json:"minutes_until,omitempty"`
+	HasLessonToday bool   `json:"has_lesson_today"`
+}

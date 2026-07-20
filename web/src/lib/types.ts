@@ -132,3 +132,51 @@ export interface SaveAttendanceEntry {
   client_id: number
   present: boolean
 }
+
+export interface CoachSubscription {
+  id: number
+  coach_id: number
+  status: 'trial' | 'active' | 'expired' | 'canceled'
+  trial_start: string
+  trial_end?: string | null
+  paid_until?: string | null
+  created_at: string
+}
+
+export interface CoachOnboarding {
+  is_coach: boolean
+  message?: string
+  coach?: { id: number; full_name: string }
+  subscription?: CoachSubscription
+  active?: boolean
+  days_left?: number
+}
+
+export interface ChildLessonStatus {
+  client_id: number
+  full_name: string
+  date: string
+  time: string
+  duration: number
+  status: string
+  is_today: boolean
+  is_ongoing: boolean
+  minutes_left?: number | null
+  minutes_until?: number | null
+  has_lesson_today: boolean
+}
+
+export interface SocialLink {
+  platform: string
+  url?: string | null
+  enabled: boolean
+}
+
+export interface ParentNotifPref {
+  id: number
+  parent_user_id: number
+  child_id: number
+  lesson_start: boolean
+  lesson_end_15: boolean
+  lesson_missed: boolean
+}

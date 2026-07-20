@@ -539,6 +539,17 @@ func (b *Bot) showMenu(chatID int64, tgID string) {
 	var rows [][]tgbotapi.InlineKeyboardButton
 	switch role {
 	case domain.RoleCoach:
+		// Check subscription
+		subResp, subErr := b.c.CheckCoachSubscription(tgID)
+		if subErr != nil || subResp == nil || !subResp.Active {
+			rows = [][]tgbotapi.InlineKeyboardButton{
+				{tgbotapi.NewInlineKeyboardButtonData("📅 Моё расписание", "schedule")},
+				{tgbotapi.NewInlineKeyboardButtonData("💳 Оформить подписку", "subscription")},
+			}
+			kb := tgbotapi.NewInlineKeyboardMarkup(rows...)
+			b.sendWithKeyboard(chatID, "⛔ Подписка неактивна. Доступные функции ограничены.\nОформите подписку для полного доступа к боту.", kb)
+			return
+		}
 		rows = [][]tgbotapi.InlineKeyboardButton{
 			{tgbotapi.NewInlineKeyboardButtonData("📅 Моё расписание", "schedule")},
 			{tgbotapi.NewInlineKeyboardButtonData("✅ Отметить посещаемость", "att_menu")},
@@ -664,6 +675,8 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		b.showMenu(chatID, tgID)
 	case data == "schedule":
 		b.showSchedule(chatID, tgID)
+	case data == "subscription":
+		b.send(chatID, "Оформить подписку можно в веб-приложении: откройте Профиль → Стать тренером.\nИли напишите администратору.")
 	case data == "contact":
 		b.mu.Lock()
 		b.expectContact[chatID] = true
