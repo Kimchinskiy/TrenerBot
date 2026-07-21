@@ -304,7 +304,7 @@ func (s *Store) UpdateClient(c domain.Client) error {
 }
 
 func (s *Store) ListClients() ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL ORDER BY full_name`)
+	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL AND id IN (SELECT MIN(id) FROM clients WHERE full_name != '' AND full_name IS NOT NULL GROUP BY CASE WHEN user_id IS NULL THEN full_name ELSE CAST(user_id AS TEXT) END) ORDER BY full_name`)
 	if err != nil {
 		return nil, err
 	}

@@ -46,7 +46,12 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
     if (!clients) return []
     if (!searchQuery.trim()) return clients
     const q = searchQuery.toLowerCase().trim()
-    return clients.filter((c) => c.full_name.toLowerCase().includes(q))
+    const seen = new Set<number>()
+    return clients.filter((c) => {
+      if (seen.has(c.id)) return false
+      seen.add(c.id)
+      return c.full_name.toLowerCase().includes(q)
+    })
   }, [clients, searchQuery])
 
   const handleSelect = (id: number, name: string) => {
