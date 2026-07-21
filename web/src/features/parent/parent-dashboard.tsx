@@ -13,8 +13,8 @@ import LinkChildSection from './link-child-screen'
 function StatusBadge({ status }: { status: ChildLessonStatus }) {
   if (status.is_ongoing) {
     return (
-      <div className="flex items-center gap-1.5 text-emerald-400 text-sm font-bold">
-        <Play className="h-3.5 w-3.5 fill-emerald-400" />
+      <div className="flex items-center gap-1.5 text-success text-sm font-bold">
+        <Play className="h-3.5 w-3.5 fill-success" />
         <span>Тренировка идёт</span>
         {status.minutes_left != null && <span className="text-muted-foreground font-normal">(осталось {status.minutes_left} мин)</span>}
       </div>
@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: ChildLessonStatus }) {
   }
   if (status.minutes_until != null && status.minutes_until <= 60 && status.minutes_until > 0) {
     return (
-      <div className="flex items-center gap-1.5 text-amber-400 text-sm font-bold">
+      <div className="flex items-center gap-1.5 text-warning text-sm font-bold">
         <Clock className="h-3.5 w-3.5" />
         <span>Скоро начнётся (через {status.minutes_until} мин)</span>
       </div>
@@ -30,7 +30,7 @@ function StatusBadge({ status }: { status: ChildLessonStatus }) {
   }
   if (status.has_lesson_today) {
     return (
-      <div className="flex items-center gap-1.5 text-blue-400 text-sm">
+      <div className="flex items-center gap-1.5 text-primary text-sm">
         <CheckCircle2 className="h-3.5 w-3.5" />
         <span>Тренировка сегодня в {status.time}</span>
       </div>

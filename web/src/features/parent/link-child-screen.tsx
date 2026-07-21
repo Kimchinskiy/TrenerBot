@@ -30,14 +30,14 @@ export default function LinkChildSection() {
           Найдите ребёнка по имени и дате рождения
         </p>
         <input
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
           placeholder="Имя и фамилия ребёнка"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
         <input
           type="date"
-          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+          className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
           value={birthDate}
           onChange={(e) => setBirthDate(e.target.value)}
         />
@@ -52,13 +52,13 @@ export default function LinkChildSection() {
           {link.isPending ? 'Поиск...' : 'Найти и привязать'}
         </Button>
         {link.isSuccess && (
-          <div className="flex items-center gap-2 text-emerald-400 text-sm font-bold">
+          <div className="flex items-center gap-2 text-success text-sm font-bold">
             <Check className="h-4 w-4" />
             <span>Ребёнок {link.data?.child_name} привязан!</span>
           </div>
         )}
         {link.isError && (
-          <div className="text-red-400 text-sm">{link.error?.message}</div>
+          <div className="text-destructive text-sm font-semibold">{link.error?.message}</div>
         )}
       </div>
     </Card>

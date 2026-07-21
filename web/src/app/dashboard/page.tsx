@@ -7,7 +7,7 @@ export default function DashboardRootPage() {
   const router = useRouter()
 
   useEffect(() => {
-    router.replace('/dashboard/schedule')
+    router.replace('/dashboard/home')
   }, [router])
 
   return null

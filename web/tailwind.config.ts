@@ -1,5 +1,6 @@
-/** @type {import('tailwindcss').Config} */
-export default {
+import type { Config } from 'tailwindcss'
+
+const config: Config = {
   darkMode: ['class'],
   content: [
     './src/pages/**/*.{ts,tsx}',
@@ -18,6 +19,7 @@ export default {
         primary: {
           DEFAULT: 'hsl(var(--primary))',
           foreground: 'hsl(var(--primary-foreground))',
+          light: 'hsl(var(--primary-light))',
         },
         secondary: {
           DEFAULT: 'hsl(var(--secondary))',
@@ -35,6 +37,14 @@ export default {
           DEFAULT: 'hsl(var(--destructive))',
           foreground: 'hsl(var(--destructive-foreground))',
         },
+        success: {
+          DEFAULT: 'hsl(var(--success))',
+          light: 'hsl(var(--success-light))',
+        },
+        warning: {
+          DEFAULT: 'hsl(var(--warning))',
+          light: 'hsl(var(--warning-light))',
+        },
         card: {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
@@ -44,20 +54,26 @@ export default {
         lg: 'var(--radius)',
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)',
+        '2xl': 'calc(var(--radius) - 0.25rem)',
+        '3xl': 'calc(var(--radius) + 0.5rem)',
       },
-      // Keep the existing Telegram-style variables working alongside shadcn tokens.
-      backgroundColor: {
-        'tg-bg': 'var(--tg-theme-bg-color)',
-        'tg-secondary': 'var(--tg-theme-secondary-bg-color)',
+      fontFamily: {
+        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
-      textColor: {
-        'tg-text': 'var(--tg-theme-text-color)',
-        'tg-hint': 'var(--tg-theme-hint-color)',
-        'tg-link': 'var(--tg-theme-link-color)',
-        'tg-button': 'var(--tg-theme-button-color)',
-        'tg-button-text': 'var(--tg-theme-button-text-color)',
+      fontSize: {
+        'display': ['2rem', { lineHeight: '2.25rem', fontWeight: '700', letterSpacing: '-0.02em' }],
+        'title': ['1.5rem', { lineHeight: '2rem', fontWeight: '700', letterSpacing: '-0.02em' }],
+        'heading': ['1.25rem', { lineHeight: '1.75rem', fontWeight: '700', letterSpacing: '-0.01em' }],
+      },
+      boxShadow: {
+        'soft': '0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03)',
+        'card': '0 1px 2px rgba(0, 0, 0, 0.04), 0 2px 8px rgba(0, 0, 0, 0.02)',
+        'elevated': '0 2px 4px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06)',
+        'glow': '0 0 20px rgba(20, 184, 166, 0.15)',
       },
     },
   },
   plugins: [],
 }
+
+export default config

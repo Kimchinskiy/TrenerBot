@@ -19,8 +19,8 @@ export default function FloatingNavbar({
   const pathname = usePathname()
 
   return (
-    <div className="fixed bottom-6 left-0 right-0 z-50 flex justify-center px-4">
-      <nav className="flex items-center gap-1.5 rounded-full border border-border/60 bg-background/80 p-2 shadow-2xl backdrop-blur-lg transition-all duration-300">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-5 pt-2">
+      <nav className="glass-strong flex items-center gap-1 rounded-2xl px-2 py-2 shadow-elevated w-full max-w-md">
         {items.map((item) => {
           const isActive = item.href ? pathname.startsWith(item.href) : false
           return (
@@ -28,14 +28,24 @@ export default function FloatingNavbar({
               key={item.label}
               onClick={item.onClick}
               className={cn(
-                'relative flex h-12 w-12 items-center justify-center rounded-full transition-all duration-300 active:scale-95',
+                'relative flex flex-1 flex-col items-center gap-0.5 rounded-xl py-2 transition-all duration-200 active:scale-95',
                 isActive
-                  ? 'bg-primary text-primary-foreground shadow-md scale-105'
-                  : 'text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                  ? 'bg-primary/10 text-primary'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
-              {item.icon}
-              <span className="sr-only">{item.label}</span>
+              <div className={cn(
+                'flex h-6 w-6 items-center justify-center transition-all duration-200',
+                isActive && 'scale-110',
+              )}>
+                {item.icon}
+              </div>
+              <span className={cn(
+                'text-[10px] font-medium leading-none transition-all duration-200',
+                isActive ? 'font-semibold' : 'font-medium',
+              )}>
+                {item.label}
+              </span>
             </button>
           )
         })}

@@ -1,14 +1,17 @@
 import * as React from 'react'
 import { cn } from '@/lib/utils'
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { onClick?: () => void }>(
-  ({ className, onClick, ...props }, ref) => (
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { onClick?: () => void; glass?: boolean }>(
+  ({ className, onClick, glass, ...props }, ref) => (
     <div
       ref={ref}
       onClick={onClick}
       className={cn(
-        'rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm transition-all duration-200',
-        onClick ? 'cursor-pointer hover:border-foreground/20 active:scale-[0.99]' : '',
+        'rounded-3xl border bg-white p-5 text-card-foreground transition-all duration-200',
+        glass
+          ? 'glass-card shadow-card border-white/60'
+          : 'shadow-card border-border/50',
+        onClick ? 'cursor-pointer hover:shadow-elevated active:scale-[0.99]' : '',
         className,
       )}
       {...props}

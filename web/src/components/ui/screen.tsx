@@ -17,14 +17,16 @@ export function ScreenHeader({
   subtitle,
   onBack,
   action,
+  gradient,
 }: {
   title: string
   subtitle?: string
   onBack?: () => void
   action?: React.ReactNode
+  gradient?: boolean
 }) {
   return (
-    <div className="px-4 pb-4 pt-6 flex flex-col gap-1.5">
+    <div className="px-5 pb-4 pt-6 flex flex-col gap-1.5">
       <div className="flex items-center justify-between">
         <div className="flex-1">
           {onBack && (
@@ -36,8 +38,13 @@ export function ScreenHeader({
               <span>Назад</span>
             </button>
           )}
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
-          {subtitle && <p className="text-sm font-medium text-muted-foreground">{subtitle}</p>}
+          <h1 className={cn(
+            'text-display font-bold tracking-tight',
+            gradient ? 'gradient-text' : 'text-foreground',
+          )}>
+            {title}
+          </h1>
+          {subtitle && <p className="text-sm font-medium text-muted-foreground mt-0.5">{subtitle}</p>}
         </div>
         {action && <div className="ml-3">{action}</div>}
       </div>
@@ -45,10 +52,11 @@ export function ScreenHeader({
   )
 }
 
-export function Empty({ text }: { text: string }) {
+export function Empty({ text, icon }: { text: string; icon?: React.ReactNode }) {
   return (
-    <div className="px-6 py-12 flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-border bg-card/30 backdrop-blur-sm">
-      <p className="text-sm font-semibold text-muted-foreground">{text}</p>
+    <div className="px-6 py-12 flex flex-col items-center justify-center text-center rounded-3xl border border-dashed border-border bg-muted/30">
+      {icon && <div className="mb-3 text-muted-foreground/50">{icon}</div>}
+      <p className="text-sm font-medium text-muted-foreground">{text}</p>
     </div>
   )
 }
@@ -56,9 +64,9 @@ export function Empty({ text }: { text: string }) {
 export function ErrorBox({ error }: { error: unknown }) {
   const msg = error instanceof Error ? error.message : 'Произошла ошибка'
   return (
-    <div className="mx-4 my-4 rounded-xl border border-destructive/20 bg-destructive/10 p-4 flex gap-3 text-sm text-destructive-foreground">
+    <div className="mx-4 my-4 rounded-2xl border border-destructive/20 bg-destructive/5 p-4 flex gap-3 text-sm">
       <AlertCircle className="h-5 w-5 shrink-0 text-destructive" />
-      <span className="font-medium">{msg}</span>
+      <span className="font-medium text-foreground">{msg}</span>
     </div>
   )
 }
@@ -66,9 +74,9 @@ export function ErrorBox({ error }: { error: unknown }) {
 export function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
-    <div className="flex justify-between gap-4 py-2 border-b border-border/40 last:border-b-0 text-sm">
-      <span className="font-semibold text-muted-foreground">{label}</span>
-      <span className="text-right font-medium text-foreground">{value}</span>
+    <div className="flex justify-between gap-4 py-2.5 border-b border-border/40 last:border-b-0 text-sm">
+      <span className="font-medium text-muted-foreground">{label}</span>
+      <span className="text-right font-semibold text-foreground">{value}</span>
     </div>
   )
 }

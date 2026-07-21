@@ -1,56 +1,48 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useMe, useCoachOnboarding, useUpgradeToCoach, useStartCoachTrial, useUpgradeToParent } from '@/lib/hooks'
+import { useMe, useCoachOnboarding, useUpgradeToCoach, useStartCoachTrial } from '@/lib/hooks'
 import { ScreenHeader, Card, Spinner, Empty, ErrorBox, Row } from '@/components/ui/screen'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { WaveDivider } from '@/components/ui/wave-divider'
 import type { Client } from '@/lib/types'
-import { Bell, Sparkles, Timer, Crown, LogOut } from 'lucide-react'
-import { useState } from 'react'
+import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { logout } from '@/lib/auth'
+import { useState } from 'react'
 
 function ClientCard({ c }: { c: Client }) {
   const isActive = c.status === 'active'
+  const initials = c.full_name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase()
 
   return (
-    <Card className="mb-4 shadow-md border-border/80 relative overflow-hidden">
-      <div className="absolute top-0 right-0 h-24 w-24 bg-primary/10 rounded-full blur-3xl" />
-      <div className="flex items-center gap-4 mb-4">
-        <Avatar className="h-14 w-14 border-2 border-border shadow-sm">
-          <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
-            {c.full_name.charAt(0)}
-          </AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold text-foreground truncate">{c.full_name}</h2>
-          <div className="mt-1 flex items-center">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border ${
-              isActive
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-muted-foreground/30 bg-muted text-muted-foreground'
-            }`}>
-              {isActive ? 'Активен' : c.status}
-            </span>
-          </div>
+    <Card className="flex items-center gap-4">
+      <Avatar className="h-14 w-14 border-2 border-white shadow-sm">
+        <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold uppercase">
+          {initials}
+        </AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <h2 className="text-lg font-bold text-foreground truncate">{c.full_name}</h2>
+        <div className="flex items-center gap-2 mt-1">
+          <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            isActive
+              ? 'bg-success-light text-success'
+              : 'bg-muted text-muted-foreground'
+          }`}>
+            {isActive ? 'Активен' : c.status}
+          </span>
+          {c.age && <span className="text-xs text-muted-foreground">{c.age} лет</span>}
         </div>
-      </div>
-      <div className="flex flex-col gap-1.5 pt-2">
-        <Row label="Телефон" value={c.phone} />
-        <Row label="Возраст" value={c.age ? `${c.age} лет` : null} />
-        <Row label="Мед. ограничения" value={c.medical_limits} />
-        {c.subscription_ends_at && <Row label="Подписка до" value={c.subscription_ends_at} />}
       </div>
     </Card>
   )
 }
 
 function CoachOnboarding() {
-  const router = useRouter()
   const { data, isLoading } = useCoachOnboarding()
   const upgrade = useUpgradeToCoach()
-  const startTrial = useStartCoachTrial()
   const [showForm, setShowForm] = useState(false)
   const [fullName, setFullName] = useState('')
   const [sport, setSport] = useState('')
@@ -60,15 +52,17 @@ function CoachOnboarding() {
   if (!data?.is_coach) {
     if (!showForm) {
       return (
-        <Card className="mb-4 shadow-md border-primary/30 relative overflow-hidden">
-          <div className="absolute top-0 right-0 h-32 w-32 bg-primary/20 rounded-full blur-3xl" />
-          <div className="flex flex-col items-center text-center gap-4 py-4">
-            <Crown className="h-10 w-10 text-primary" />
-            <div>
-              <h3 className="text-lg font-bold mb-2">Станьте тренером!</h3>
-              <p className="text-sm text-muted-foreground">{data?.message || 'До сих пор ведете учет в заметках или Excel? Платформа Плавли создана от тренеров для тренеров.'}</p>
+        <Card className="border-primary/20 relative overflow-hidden">
+          <div className="absolute top-0 right-0 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
+          <div className="flex flex-col items-center text-center gap-4 py-4 relative">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+              <Crown className="h-7 w-7 text-primary" />
             </div>
-            <Button onClick={() => setShowForm(true)} className="w-full font-bold shadow-md">
+            <div>
+              <h3 className="text-lg font-bold text-foreground mb-1">Станьте тренером!</h3>
+              <p className="text-sm text-muted-foreground">{data?.message || 'Ведёте учёт в заметках? Платформа Плавли создана от тренеров для тренеров.'}</p>
+            </div>
+            <Button onClick={() => setShowForm(true)} variant="gradient" className="w-full">
               Начать
             </Button>
             <p className="text-xs text-muted-foreground">7 дней бесплатно, затем 990₽/мес</p>
@@ -78,17 +72,17 @@ function CoachOnboarding() {
     }
 
     return (
-      <Card className="mb-4 shadow-md">
-        <h3 className="text-lg font-bold mb-4">Регистрация тренера</h3>
+      <Card>
+        <h3 className="text-lg font-bold text-foreground mb-4">Регистрация тренера</h3>
         <div className="flex flex-col gap-3">
           <input
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
             placeholder="Ваше имя и фамилия"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
           <input
-            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
             placeholder="Вид спорта (необязательно)"
             value={sport}
             onChange={(e) => setSport(e.target.value)}
@@ -101,119 +95,77 @@ function CoachOnboarding() {
                 upgrade.mutate({ fullName: fullName.trim(), sport: sport.trim() })
               }}
               disabled={upgrade.isPending || !fullName.trim()}
-              className="flex-1 font-bold shadow-md"
+              variant="gradient"
+              className="flex-1"
             >
               {upgrade.isPending ? 'Создание...' : 'Стать тренером'}
             </Button>
           </div>
           {upgrade.isSuccess && (
-            <div className="text-center text-emerald-400 text-sm font-bold">
-              Аккаунт тренера создан! 7 дней бесплатно.
-            </div>
+            <p className="text-center text-success text-sm font-semibold">Аккаунт тренера создан!</p>
           )}
           {upgrade.isError && (
-            <div className="text-center text-red-400 text-sm">Ошибка: {upgrade.error?.message}</div>
+            <p className="text-center text-destructive text-sm">{upgrade.error?.message}</p>
           )}
         </div>
       </Card>
     )
   }
 
-  // Coach with subscription info
   const sub = data.subscription
   const isActive = data.active
   const daysLeft = data.days_left ?? 0
 
   return (
-    <Card className="mb-4 shadow-md border-primary/30 relative overflow-hidden">
+    <Card className="border-primary/20 relative overflow-hidden">
       <div className="absolute top-0 right-0 h-32 w-32 bg-primary/10 rounded-full blur-3xl" />
-      <div className="flex items-center gap-4 mb-4">
+      <div className="flex items-center gap-4 mb-3 relative">
         <Avatar className="h-14 w-14 border-2 border-primary shadow-sm">
-          <AvatarFallback className="bg-primary/10 text-primary text-xl font-bold uppercase">
+          <AvatarFallback className="bg-primary/10 text-primary text-lg font-bold uppercase">
             {data.coach?.full_name?.charAt(0) || 'T'}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
-          <h2 className="text-xl font-bold text-foreground truncate">{data.coach?.full_name || 'Тренер'}</h2>
-          <div className="mt-1 flex items-center gap-2">
-            <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider border ${
-              isActive
-                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-400'
-                : 'border-red-500/30 bg-red-500/10 text-red-400'
-            }`}>
-              {isActive ? (sub?.status === 'trial' ? 'Пробный' : 'Активна') : 'Неактивна'}
-            </span>
-          </div>
+          <h2 className="text-lg font-bold text-foreground truncate">{data.coach?.full_name || 'Тренер'}</h2>
+          <span className={`mt-1 inline-flex items-center rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+            isActive
+              ? 'bg-success-light text-success'
+              : 'bg-destructive/10 text-destructive'
+          }`}>
+            {isActive ? (sub?.status === 'trial' ? 'Пробный' : 'Активна') : 'Неактивна'}
+          </span>
         </div>
       </div>
-      <div className="flex flex-col gap-2 pt-2">
+      <div className="flex flex-col gap-2 relative">
         {sub?.status === 'trial' && (
-          <>
-            <Row label="Пробный период" value={`${daysLeft} дн.`} />
-            {daysLeft <= 0 ? (
-              <Button onClick={() => startTrial.mutate()} disabled={startTrial.isPending} className="w-full mt-2 font-bold shadow-md">
-                {startTrial.isPending ? 'Загрузка...' : 'Активировать подписку'}
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                <Timer className="h-4 w-4" />
-                <span>Осталось {daysLeft} дн. бесплатно</span>
-              </div>
-            )}
-          </>
+          <Row label="Пробный период" value={`${daysLeft} дн.`} />
         )}
         {sub?.status === 'active' && sub.paid_until && (
           <Row label="Оплачено до" value={sub.paid_until} />
-        )}
-        {!isActive && (
-          <div className="mt-2 space-y-2">
-            <p className="text-sm text-muted-foreground">Подписка неактивна. Данные доступны только для просмотра.</p>
-            <Button onClick={() => router.push('/dashboard/more/subscriptions')} className="w-full font-bold shadow-md">
-              Оформить подписку
-            </Button>
-          </div>
         )}
       </div>
     </Card>
   )
 }
 
-function ParentSection({ role }: { role: string }) {
-  const router = useRouter()
-  const upgrade = useUpgradeToParent()
-
-  if (role === 'parent') {
-    return (
-      <Button
-        onClick={() => router.push('/dashboard/schedule')}
-        className="w-full flex items-center justify-center gap-2 font-bold shadow-md"
-      >
-        <Sparkles className="h-5 w-5" />
-        <span>Расписание детей</span>
-      </Button>
-    )
-  }
-
+function MenuItem({ icon: Icon, label, onClick, variant }: { icon: React.ElementType; label: string; onClick: () => void; variant?: 'default' | 'danger' }) {
   return (
-    <Card className="mb-4 shadow-md border-border/80">
-      <div className="flex flex-col items-center text-center gap-3 py-3">
-        <Sparkles className="h-8 w-8 text-primary" />
-        <div>
-          <h3 className="text-base font-bold mb-1">Я родитель</h3>
-          <p className="text-sm text-muted-foreground">Следите за тренировками ребёнка</p>
-        </div>
-        <Button
-          onClick={() => upgrade.mutate()}
-          disabled={upgrade.isPending}
-          className="w-full font-bold shadow-md"
-        >
-          {upgrade.isPending ? 'Загрузка...' : 'Стать родителем'}
-        </Button>
-        {upgrade.isSuccess && (
-          <p className="text-emerald-400 text-sm">Теперь привяжите ребёнка</p>
-        )}
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-3.5 w-full rounded-2xl p-4 transition-all duration-200 active:scale-[0.99] ${
+        variant === 'danger'
+          ? 'bg-destructive/5 text-destructive hover:bg-destructive/10'
+          : 'bg-white shadow-card border border-border/30 hover:shadow-elevated text-foreground'
+      }`}
+    >
+      <div className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
+        variant === 'danger' ? 'bg-destructive/10' : 'bg-primary/10'
+      }`}>
+        <Icon className={`h-4 w-4 ${variant === 'danger' ? 'text-destructive' : 'text-primary'}`} />
       </div>
-    </Card>
+      <span className="flex-1 text-left text-sm font-semibold">{label}</span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+    </button>
   )
 }
 
@@ -228,51 +180,54 @@ export default function Profile() {
     router.replace('/login')
   }
 
+  const firstName = data?.client?.full_name?.split(' ')[0] || data?.role === 'parent' ? 'Родитель' : 'Тренер'
+  const roleLabel = data?.role === 'coach' ? 'Тренер' : data?.role === 'admin' ? 'Администратор' : data?.role === 'parent' ? 'Родитель' : 'Клиент'
+
   return (
-    <div>
+    <div className="pb-24">
       <ScreenHeader title="Профиль" />
+
       {isLoading && <Spinner label="Загрузка..." />}
       {error && <ErrorBox error={error} />}
       {!isLoading && !data && <Empty text="Профиль не найден" />}
+
       {data && (
-        <div className="px-4 pb-24">
+        <div className="px-5 flex flex-col gap-5">
+          {/* Profile header */}
+          <div className="flex flex-col items-center">
+            <Avatar className="h-20 w-20 border-4 border-white shadow-elevated mb-3">
+              <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
+                {firstName.charAt(0)}
+              </AvatarFallback>
+            </Avatar>
+            <h2 className="text-title font-bold text-foreground">{firstName}</h2>
+            <p className="text-sm text-muted-foreground mt-0.5">{roleLabel}</p>
+          </div>
+
+          <WaveDivider className="text-primary/5 -my-2" />
+
+          {/* Client card */}
           {data.client && <ClientCard c={data.client} />}
 
+          {/* Coach onboarding */}
           {data.role === 'coach' && <CoachOnboarding />}
 
-          {data.role !== 'admin' && <ParentSection role={data.role} />}
-
-          {data.role === 'parent' && data.children && data.children.length > 0 && (
-            <div className="mt-4">
-              <div className="mb-3 px-1 text-sm font-bold tracking-wider text-muted-foreground uppercase flex items-center gap-1.5">
-                <Sparkles className="h-4 w-4 text-primary" />
-                <span>Дети</span>
-              </div>
-              {data.children.map((c) => <ClientCard key={c.id} c={c} />)}
-            </div>
-          )}
-          {(data.role === 'coach' || data.role === 'admin') && (
-            <div className="mt-6">
-              <Button
-                onClick={() => router.push('/dashboard/more/notifications')}
-                className="w-full flex items-center justify-center gap-2 font-bold shadow-md"
-              >
-                <Bell className="h-5 w-5" />
-                <span>Оповестить клиентов</span>
-              </Button>
-            </div>
-          )}
-
-          <div className="mt-8 pt-6 border-t border-border/50">
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="w-full flex items-center justify-center gap-2 font-bold text-red-400 border-red-400/30 hover:bg-red-500/10"
-            >
-              <LogOut className="h-5 w-5" />
-              <span>Выйти из аккаунта</span>
-            </Button>
+          {/* Menu */}
+          <div className="flex flex-col gap-2">
+            {(data.role === 'coach' || data.role === 'admin') && (
+              <>
+                <MenuItem icon={Users} label="Мои клиенты" onClick={() => router.push('/dashboard/clients')} />
+                <MenuItem icon={Calendar} label="Мой график" onClick={() => router.push('/dashboard/schedule')} />
+                <MenuItem icon={BarChart3} label="Статистика" onClick={() => {}} />
+                <MenuItem icon={Bell} label="Оповестить клиентов" onClick={() => router.push('/dashboard/notifications')} />
+              </>
+            )}
+            <MenuItem icon={Settings} label="Настройки" onClick={() => {}} />
+            <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => {}} />
           </div>
+
+          {/* Logout */}
+          <MenuItem icon={LogOut} label="Выйти из аккаунта" onClick={handleLogout} variant="danger" />
         </div>
       )}
     </div>

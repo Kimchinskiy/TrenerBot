@@ -4,20 +4,28 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-xl text-base font-semibold transition-all duration-200 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center whitespace-nowrap rounded-2xl text-base font-semibold transition-all duration-200 active:scale-[0.97] disabled:pointer-events-none disabled:opacity-50',
   {
     variants: {
       variant: {
-        primary: 'bg-primary text-primary-foreground hover:opacity-95 shadow-sm',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/90 border border-border/40',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/95 shadow-sm',
-        outline: 'border border-border bg-transparent text-foreground hover:bg-muted/30',
-        ghost: 'bg-transparent text-foreground hover:bg-muted/30',
+        primary:
+          'bg-primary text-primary-foreground hover:bg-primary/90 shadow-md shadow-primary/20',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-secondary/80 border border-border/50',
+        destructive:
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-sm',
+        outline:
+          'border border-border bg-white text-foreground hover:bg-muted/50',
+        ghost:
+          'bg-transparent text-foreground hover:bg-muted/50',
+        gradient:
+          'bg-gradient-to-r from-primary to-cyan-500 text-white hover:opacity-90 shadow-md shadow-primary/25',
       },
       size: {
         default: 'w-full px-4 py-3 h-12',
-        sm: 'px-3 py-1.5 text-sm h-9',
-        icon: 'h-10 w-10',
+        sm: 'px-3 py-1.5 text-sm h-9 rounded-xl',
+        lg: 'w-full px-6 py-4 h-14 text-lg rounded-2xl',
+        icon: 'h-10 w-10 rounded-xl',
       },
     },
     defaultVariants: {

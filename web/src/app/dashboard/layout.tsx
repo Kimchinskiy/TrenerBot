@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-provider'
 import FloatingNavbar, { type FloatingNavItem } from '@/components/ui/floating-navbar'
-import { CalendarDays, User, MoreHorizontal, Heart, Users } from 'lucide-react'
+import { Home, CalendarDays, Users, CheckCircle, User } from 'lucide-react'
 import { useMe } from '@/lib/hooks'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -20,35 +20,40 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   if (status !== 'authed') {
     return (
       <div className="flex h-full items-center justify-center">
-        <div className="h-7 w-7 animate-spin rounded-full border-2 border-tg-hint border-t-transparent" />
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-primary border-t-transparent" />
       </div>
     )
   }
 
   const items: FloatingNavItem[] = [
     {
-      label: me?.role === 'parent' ? 'Дети' : 'Расписание',
-      icon: me?.role === 'parent' ? <Heart className="h-5 w-5" /> : <CalendarDays className="h-5 w-5" />,
+      label: 'Главная',
+      icon: <Home className="h-5 w-5" />,
+      href: '/dashboard/home',
+    },
+    {
+      label: 'Расписание',
+      icon: <CalendarDays className="h-5 w-5" />,
       href: '/dashboard/schedule',
     },
-    ...(me?.role === 'admin' || me?.role === 'coach'
+    ...(me?.role === 'coach' || me?.role === 'admin'
       ? [
           {
-            label: 'Группы',
+            label: 'Клиенты',
             icon: <Users className="h-5 w-5" />,
-            href: '/dashboard/groups',
+            href: '/dashboard/clients',
           },
         ]
       : []),
     {
+      label: 'Посещаемость',
+      icon: <CheckCircle className="h-5 w-5" />,
+      href: '/dashboard/attendance',
+    },
+    {
       label: 'Профиль',
       icon: <User className="h-5 w-5" />,
       href: '/dashboard/profile',
-    },
-    {
-      label: 'Ещё',
-      icon: <MoreHorizontal className="h-5 w-5" />,
-      href: '/dashboard/more',
     },
   ]
 
@@ -57,7 +62,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full flex-col bg-background">
       <div className="flex-1 overflow-y-auto pb-24">{children}</div>
       <FloatingNavbar
         items={items.map((item) => ({

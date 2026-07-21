@@ -51,12 +51,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
     if (!clients) return []
     if (!searchQuery.trim()) return clients
     const q = searchQuery.toLowerCase().trim()
-    const seen = new Set<number>()
-    return clients.filter((c) => {
-      if (seen.has(c.id)) return false
-      seen.add(c.id)
-      return c.full_name.toLowerCase().includes(q)
-    })
+    return clients.filter((c) => c.full_name.toLowerCase().includes(q))
   }, [clients, searchQuery])
 
   const filteredGroups = useMemo(() => {
@@ -97,25 +92,25 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-2xl bg-background p-5 pb-8 shadow-2xl animate-in fade-in zoom-in-95"
+        className="w-full max-w-lg rounded-3xl bg-white p-5 pb-8 shadow-elevated fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-bold">Новая тренировка</h2>
-          <button onClick={onClose} className="rounded-full p-2 hover:bg-muted/60 transition-colors">
-            <X className="h-5 w-5" />
+          <h2 className="text-lg font-bold text-foreground">Новая тренировка</h2>
+          <button onClick={onClose} className="rounded-xl p-2 hover:bg-muted/50 transition-colors">
+            <X className="h-5 w-5 text-muted-foreground" />
           </button>
         </div>
 
         <div className="flex flex-col gap-4">
-          <div className="flex rounded-xl border border-border bg-muted/40 p-1">
+          <div className="flex rounded-2xl bg-muted/50 p-1">
             <button
               type="button"
               onClick={() => { setMode('client'); setSelectedGroup(null); setShowResults(false) }}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-bold transition-colors ${
-                mode === 'client' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${
+                mode === 'client' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <UserRound className="h-4 w-4" /> Клиент
@@ -123,8 +118,8 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
             <button
               type="button"
               onClick={() => { setMode('group'); setSelectedClient(null); setShowResults(false) }}
-              className={`flex-1 flex items-center justify-center gap-2 rounded-lg py-2 text-sm font-bold transition-colors ${
-                mode === 'group' ? 'bg-background shadow-sm text-foreground' : 'text-muted-foreground'
+              className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${
+                mode === 'group' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <Users className="h-4 w-4" /> Группа
@@ -132,60 +127,53 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
           </div>
 
           <div className="relative">
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
-              {mode === 'client' ? <Users className="h-3.5 w-3.5" /> : <Users className="h-3.5 w-3.5" />}
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
               {mode === 'client' ? 'Клиент' : 'Группа'}
             </label>
             {mode === 'client' && selectedClient ? (
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  <span className="font-medium">{selectedClient.name}</span>
+                  <Check className="h-4 w-4 text-success" />
+                  <span className="text-sm font-semibold">{selectedClient.name}</span>
                 </div>
-                <button
-                  onClick={() => setSelectedClient(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
-                >
+                <button onClick={() => setSelectedClient(null)} className="text-xs text-primary font-semibold">
                   Изменить
                 </button>
               </div>
             ) : mode === 'group' && selectedGroup ? (
-              <div className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3">
                 <div className="flex items-center gap-2">
-                  <Check className="h-4 w-4 text-emerald-400" />
-                  <span className="font-medium">{selectedGroup.name}</span>
+                  <Check className="h-4 w-4 text-success" />
+                  <span className="text-sm font-semibold">{selectedGroup.name}</span>
                 </div>
-                <button
-                  onClick={() => setSelectedGroup(null)}
-                  className="text-xs text-muted-foreground hover:text-foreground underline"
-                >
+                <button onClick={() => setSelectedGroup(null)} className="text-xs text-primary font-semibold">
                   Изменить
                 </button>
               </div>
             ) : (
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" />
                 <input
                   ref={searchRef}
                   type="text"
                   value={searchQuery}
                   onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                   onFocus={() => setShowResults(true)}
-                  placeholder={mode === 'client' ? 'Поиск по фамилии или имени...' : 'Поиск по названию группы...'}
-                  className="w-full rounded-xl border border-border bg-background pl-10 pr-4 py-3 text-base"
+                  placeholder={mode === 'client' ? 'Поиск по фамилии...' : 'Поиск по названию...'}
+                  className="w-full rounded-2xl border border-border/60 bg-white pl-10 pr-4 py-3 text-sm"
                 />
                 {showResults && searchQuery.trim() && (
-                  <div className="absolute z-10 mt-1 w-full rounded-xl border border-border bg-background shadow-xl max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 mt-1 w-full rounded-2xl border border-border/50 bg-white shadow-elevated max-h-48 overflow-y-auto">
                     {(mode === 'client' ? filteredClients : filteredGroups).length === 0 ? (
                       <div className="px-4 py-3 text-sm text-muted-foreground">Ничего не найдено</div>
                     ) : (
                       (mode === 'client' ? filteredClients : filteredGroups).map((item: any) => (
                         <button
                           key={item.id}
-                          onClick={() => mode === 'client' ? handleSelectClient(item.id, item.full_name || item.name) : handleSelectGroup(item.id, item.name)}
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted/60 transition-colors border-b border-border/50 last:border-0"
+                          onClick={() => mode === 'client' ? handleSelectClient(item.id, item.full_name) : handleSelectGroup(item.id, item.name)}
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted/30 transition-colors border-b border-border/30 last:border-0 font-medium"
                         >
-                          {mode === 'client' ? (item as any).full_name : item.name}
+                          {mode === 'client' ? item.full_name : item.name}
                         </button>
                       ))
                     )}
@@ -203,45 +191,47 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-base"
+              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
             />
           </div>
 
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
-              <Clock className="h-3.5 w-3.5" /> Время
-            </label>
-            <input
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-base"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
-              <Timer className="h-3.5 w-3.5" /> Длительность (мин)
-            </label>
-            <input
-              type="number"
-              min={15}
-              max={180}
-              step={5}
-              value={duration}
-              onChange={(e) => setDuration(e.target.value)}
-              className="w-full rounded-xl border border-border bg-background px-4 py-3 text-base"
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" /> Время
+              </label>
+              <input
+                type="time"
+                value={time}
+                onChange={(e) => setTime(e.target.value)}
+                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Timer className="h-3.5 w-3.5" /> Длительность
+              </label>
+              <input
+                type="number"
+                min={15}
+                max={180}
+                step={5}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+              />
+            </div>
           </div>
 
           <Button
             onClick={handleSubmit}
+            variant="gradient"
+            size="lg"
             disabled={
               (mode === 'client' && (!selectedClient || !date || !time)) ||
               (mode === 'group' && (!selectedGroup || !date || !time)) ||
               createEntry.isPending
             }
-            className="mt-2"
           >
             {createEntry.isPending ? 'Сохранение...' : 'Создать тренировку'}
           </Button>

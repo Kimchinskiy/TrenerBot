@@ -10,7 +10,7 @@ export default function HomePage() {
   const { status } = useAuth()
 
   useEffect(() => {
-    if (status === 'authed') router.replace('/dashboard/schedule')
+    if (status === 'authed') router.replace('/dashboard/home')
     else if (status === 'guest') router.replace('/login')
   }, [status, router])
 

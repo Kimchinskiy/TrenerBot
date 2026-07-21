@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect } from 'react'
-import { applyTheme } from '@/services/telegram'
 
 export function ApplyTheme() {
   useEffect(() => {
-    applyTheme()
+    const tw = (window as any).Telegram?.WebApp
+    if (tw) {
+      tw.ready?.()
+      tw.expand?.()
+    }
   }, [])
   return null
 }
