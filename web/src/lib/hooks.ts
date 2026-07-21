@@ -95,7 +95,7 @@ export function useMessageCoach() {
 export function useCreateScheduleEntry() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (data: { client_id: number; date: string; time: string; duration?: number }) =>
+    mutationFn: (data: { client_id?: number; group_id?: number; date: string; time: string; duration?: number }) =>
       endpoints.createScheduleEntry(data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['schedule'] })
@@ -204,5 +204,62 @@ export function useSaveParentNotifPref() {
     mutationFn: (vars: { child_id: number; lesson_start?: boolean; lesson_end_15?: boolean; lesson_missed?: boolean }) =>
       endpoints.saveParentNotifPref(vars),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['parent-notif-prefs'] }),
+  })
+}
+
+// --- Groups ---
+export function useGroups() {
+  return useQuery({ queryKey: ['groups'], queryFn: () => endpoints.groups() })
+}
+
+export function useGroup(id: number) {
+  return useQuery({ queryKey: ['groups', id], queryFn: () => endpoints.group(id), enabled: !!id })
+}
+
+export function useCreateGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string; coach_id?: number; max_members?: number; schedule?: string; price?: number; location?: string; active?: number }) =>
+      endpoints.createGroup(data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  })
+}
+
+export function useUpdateGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, ...data }: { id: number; name?: string; coach_id?: number; max_members?: number; schedule?: string; price?: number; location?: string; active?: number }) =>
+      endpoints.updateGroup(id, data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  })
+}
+
+export function useDeleteGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => endpoints.deleteGroup(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['groups'] }),
+  })
+}
+
+export function useGroupClients(groupId: number) {
+  return useQuery({ queryKey: ['groups', groupId, 'clients'], queryFn: () => endpoints.groupClients(groupId), enabled: !!groupId })
+}
+
+export function useAddClientToGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, clientId, role }: { groupId: number; clientId: number; role?: string }) =>
+      endpoints.addClientToGroup(groupId, clientId, role),
+    onSuccess: (_vars, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'clients'] }),
+  })
+}
+
+export function useRemoveClientFromGroup() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ groupId, clientId }: { groupId: number; clientId: number }) =>
+      endpoints.removeClientFromGroup(groupId, clientId),
+    onSuccess: (_vars, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'clients'] }),
   })
 }

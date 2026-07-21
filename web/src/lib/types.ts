@@ -19,6 +19,8 @@ export interface ScheduleEntry {
   coach_id?: number | null
   duration: number
   status: string
+  group_id?: number | null
+  group_name?: string | null
 }
 
 export interface Client {
@@ -179,4 +181,24 @@ export interface ParentNotifPref {
   lesson_start: boolean
   lesson_end_15: boolean
   lesson_missed: boolean
+}
+
+export interface Group {
+  id: number
+  name?: string | null
+  coach_id?: number | null
+  max_members?: number | null
+  schedule?: string | null
+  price?: number | null
+  location?: string | null
+  active: number
+}
+
+export interface GroupMember {
+  id: number
+  group_id: number
+  client_id: number
+  role: string
+  joined_at: string
+  client_name?: string | null
 }

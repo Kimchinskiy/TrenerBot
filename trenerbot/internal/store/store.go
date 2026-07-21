@@ -58,6 +58,49 @@ func nullStr(v sql.NullString) *string {
 	return &s
 }
 
+func nullInt(v sql.NullInt64) *int {
+	if !v.Valid {
+		return nil
+	}
+	i := int(v.Int64)
+	return &i
+}
+
+func nullInt64(v sql.NullInt64) *int64 {
+	if !v.Valid {
+		return nil
+	}
+	return &v.Int64
+}
+
+func nullStrPtr(v *string) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
+func nullInt64Ptr(v *int64) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
+func nullIntPtr(v *int) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
+func nullFloat64Ptr(v *float64) interface{} {
+	if v == nil {
+		return nil
+	}
+	return *v
+}
+
 func (s *Store) UserByTelegram(tgID string) (*domain.User, error) {
 	return scanUser(s.DB.QueryRow(`SELECT `+userColumns+` FROM users WHERE telegram_id = ?`, tgID))
 }
@@ -709,9 +752,10 @@ func (s *Store) InsertLessonEntry(e domain.LessonEntry) (int64, error) {
 // ordered by date then time. If coachID > 0, filters by coach; if clientID > 0,
 // filters by client; otherwise returns all.
 func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([]domain.ScheduleEntry, error) {
-	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.full_name, le.coach_id, le.duration, le.status
+	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.full_name, le.coach_id, le.duration, le.status, le.group_id, g.name
 		FROM lesson_entries le
 		JOIN clients c ON c.id = le.client_id
+		LEFT JOIN groups g ON g.id = le.group_id
 		WHERE le.date >= ? AND le.date <= ?
 		AND (? <= 0 OR le.coach_id = ?)
 		AND (? <= 0 OR le.client_id = ?)
@@ -723,8 +767,22 @@ func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([
 	var out []domain.ScheduleEntry
 	for rows.Next() {
 		var e domain.ScheduleEntry
-		if err := rows.Scan(&e.ID, &e.Date, &e.Time, &e.ClientID, &e.ClientName, &e.CoachID, &e.Duration, &e.Status); err != nil {
+		var coachIDVal, groupIDVal sql.NullInt64
+		var groupName sql.NullString
+		if err := rows.Scan(&e.ID, &e.Date, &e.Time, &e.ClientID, &e.ClientName, &coachIDVal, &e.Duration, &e.Status, &groupIDVal, &groupName); err != nil {
 			return nil, err
+		}
+		if coachIDVal.Valid {
+			v := coachIDVal.Int64
+			e.CoachID = &v
+		}
+		if groupIDVal.Valid {
+			v := groupIDVal.Int64
+			e.GroupID = &v
+		}
+		if groupName.Valid {
+			v := groupName.String
+			e.GroupName = &v
 		}
 		out = append(out, e)
 	}
@@ -1166,4 +1224,139 @@ func (s *Store) ListParentUserIDsByChildID(childID int64) ([]int64, error) {
 		}
 	}
 	return out, nil
+}
+
+// ---------- Groups ----------
+
+func (s *Store) ListGroups() ([]domain.Group, error) {
+	rows, err := s.DB.Query(`SELECT id, name, coach_id, max_members, schedule, price, location, active FROM groups WHERE active = 1 ORDER BY name`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Group
+	for rows.Next() {
+		var g domain.Group
+		var name, schedule, location sql.NullString
+		var coachID sql.NullInt64
+		var maxMembers sql.NullInt64
+		var price sql.NullFloat64
+		if err := rows.Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active); err != nil {
+			return nil, err
+		}
+		g.Name = nullStr(name)
+		g.CoachID = nullInt64(coachID)
+		g.MaxMembers = nullInt(maxMembers)
+		g.Schedule = nullStr(schedule)
+		if price.Valid {
+			v := price.Float64
+			g.Price = &v
+		}
+		g.Location = nullStr(location)
+		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) GetGroup(id int64) (*domain.Group, error) {
+	g := &domain.Group{}
+	var name, schedule, location sql.NullString
+	var coachID sql.NullInt64
+	var maxMembers sql.NullInt64
+	var price sql.NullFloat64
+	err := s.DB.QueryRow(`SELECT id, name, coach_id, max_members, schedule, price, location, active FROM groups WHERE id = ?`, id).
+		Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	g.Name = nullStr(name)
+	g.CoachID = nullInt64(coachID)
+	g.MaxMembers = nullInt(maxMembers)
+	g.Schedule = nullStr(schedule)
+	if price.Valid {
+		v := price.Float64
+		g.Price = &v
+	}
+	g.Location = nullStr(location)
+	return g, nil
+}
+
+func (s *Store) CreateGroup(g domain.Group) (int64, error) {
+	res, err := s.DB.Exec(`INSERT INTO groups(name, coach_id, max_members, schedule, price, location, active) VALUES(?,?,?,?,?,?,?)`,
+		nullStrPtr(g.Name), nullInt64Ptr(g.CoachID), nullIntPtr(g.MaxMembers), nullStrPtr(g.Schedule), nullFloat64Ptr(g.Price), nullStrPtr(g.Location), g.Active)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (s *Store) UpdateGroup(g domain.Group) error {
+	_, err := s.DB.Exec(`UPDATE groups SET name=?, coach_id=?, max_members=?, schedule=?, price=?, location=?, active=? WHERE id=?`,
+		nullStrPtr(g.Name), nullInt64Ptr(g.CoachID), nullIntPtr(g.MaxMembers), nullStrPtr(g.Schedule), nullFloat64Ptr(g.Price), nullStrPtr(g.Location), g.Active, g.ID)
+	return err
+}
+
+func (s *Store) DeleteGroup(id int64) error {
+	_, err := s.DB.Exec(`DELETE FROM groups WHERE id = ?`, id)
+	return err
+}
+
+func (s *Store) AddClientToGroup(groupID, clientID int64, role string) error {
+	_, err := s.DB.Exec(`INSERT OR IGNORE INTO group_members(group_id, client_id, role) VALUES(?,?,?)`, groupID, clientID, role)
+	return err
+}
+
+func (s *Store) RemoveClientFromGroup(groupID, clientID int64) error {
+	_, err := s.DB.Exec(`DELETE FROM group_members WHERE group_id = ? AND client_id = ?`, groupID, clientID)
+	return err
+}
+
+func (s *Store) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
+	rows, err := s.DB.Query(`SELECT gm.id, gm.group_id, gm.client_id, gm.role, gm.joined_at, c.full_name FROM group_members gm JOIN clients c ON c.id = gm.client_id WHERE gm.group_id = ? ORDER BY c.full_name`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.GroupMember
+	for rows.Next() {
+		var m domain.GroupMember
+		if err := rows.Scan(&m.ID, &m.GroupID, &m.ClientID, &m.Role, &m.JoinedAt, &m.ClientName); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) GetClientGroups(clientID int64) ([]domain.Group, error) {
+	rows, err := s.DB.Query(`SELECT g.id, g.name, g.coach_id, g.max_members, g.schedule, g.price, g.location, g.active FROM groups g JOIN group_members gm ON gm.group_id = g.id WHERE gm.client_id = ? AND g.active = 1 ORDER BY g.name`, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Group
+	for rows.Next() {
+		var g domain.Group
+		var name, schedule, location sql.NullString
+		var coachID sql.NullInt64
+		var maxMembers sql.NullInt64
+		var price sql.NullFloat64
+		if err := rows.Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active); err != nil {
+			return nil, err
+		}
+		g.Name = nullStr(name)
+		g.CoachID = nullInt64(coachID)
+		g.MaxMembers = nullInt(maxMembers)
+		g.Schedule = nullStr(schedule)
+		if price.Valid {
+			v := price.Float64
+			g.Price = &v
+		}
+		g.Location = nullStr(location)
+		out = append(out, g)
+	}
+	return out, rows.Err()
 }

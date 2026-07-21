@@ -8,7 +8,7 @@ import { ScreenHeader, Card, Spinner } from '@/components/ui/screen'
 import { Button } from '@/components/ui'
 import { Switch } from '@/components/ui/switch'
 import { Accordion } from '@/components/ui/accordion'
-import { Save, Instagram, Globe, Youtube, MessageCircle, Phone, CircleDollarSign, Calendar, Heart, Shirt } from 'lucide-react'
+import { Save, Camera, Globe, Play, MessageCircle, Phone, CircleDollarSign, Calendar, Heart, Shirt } from 'lucide-react'
 import type { SocialLink } from '@/lib/types'
 
 const FAQ_ITEMS = [
@@ -39,10 +39,10 @@ const FAQ_ITEMS = [
 ]
 
 const PLATFORM_META: Record<string, { label: string; icon: React.ReactNode; placeholder: string }> = {
-  instagram: { label: 'Instagram', icon: <Instagram className="h-5 w-5" />, placeholder: 'https://instagram.com/...' },
+  instagram: { label: 'Instagram', icon: <Camera className="h-5 w-5" />, placeholder: 'https://instagram.com/...' },
   telegram: { label: 'Telegram', icon: <MessageCircle className="h-5 w-5" />, placeholder: 'https://t.me/...' },
   vk: { label: 'VK', icon: <Globe className="h-5 w-5" />, placeholder: 'https://vk.com/...' },
-  youtube: { label: 'YouTube', icon: <Youtube className="h-5 w-5" />, placeholder: 'https://youtube.com/@...' },
+  youtube: { label: 'YouTube', icon: <Play className="h-5 w-5" />, placeholder: 'https://youtube.com/@...' },
   whatsapp: { label: 'WhatsApp', icon: <Phone className="h-5 w-5" />, placeholder: 'https://wa.me/...' },
 }
 

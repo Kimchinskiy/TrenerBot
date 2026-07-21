@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -409,6 +410,7 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 	}
 	var body struct {
 		ClientID int64  `json:"client_id"`
+		GroupID  int64  `json:"group_id"`
 		Date     string `json:"date"`
 		Time     string `json:"time"`
 		Duration int    `json:"duration"`
@@ -417,26 +419,57 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
-	if body.ClientID == 0 || body.Date == "" || body.Time == "" {
-		writeError(w, http.StatusBadRequest, "client_id, date, time required")
+	if body.ClientID == 0 && body.GroupID == 0 {
+		writeError(w, http.StatusBadRequest, "client_id or group_id required")
 		return
 	}
 	if body.Duration <= 0 {
 		body.Duration = 60
 	}
-	id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
-		Date:     body.Date,
-		Time:     body.Time,
-		ClientID: body.ClientID,
-		CoachID:  &co.ID,
-		Duration: body.Duration,
-		Status:   domain.LessonPlanned,
-	})
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal")
-		return
+
+	var createdIDs []int64
+	if body.GroupID > 0 {
+		members, err := svc.GetGroupClients(body.GroupID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal")
+			return
+		}
+		if len(members) == 0 {
+			writeError(w, http.StatusBadRequest, "group is empty")
+			return
+		}
+		for _, m := range members {
+			id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
+				Date:     body.Date,
+				Time:     body.Time,
+				ClientID: m.ClientID,
+				CoachID:  &co.ID,
+				Duration: body.Duration,
+				Status:   domain.LessonPlanned,
+				GroupID:  &body.GroupID,
+			})
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "internal")
+				return
+			}
+			createdIDs = append(createdIDs, id)
+		}
+	} else {
+		id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
+			Date:     body.Date,
+			Time:     body.Time,
+			ClientID: body.ClientID,
+			CoachID:  &co.ID,
+			Duration: body.Duration,
+			Status:   domain.LessonPlanned,
+		})
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal")
+			return
+		}
+		createdIDs = append(createdIDs, id)
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"id": id})
+	writeJSON(w, http.StatusCreated, map[string]any{"ids": createdIDs})
 }
 
 // ---- Waiting List ----
@@ -747,5 +780,114 @@ func adminRevokeBotAccess(svc *service.Services, w http.ResponseWriter, r *http.
 		return
 	}
 
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ---------- Groups ----------
+
+func listGroups(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	groups, err := svc.ListGroups()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, groups)
+}
+
+func getGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	g, err := svc.GetGroup(id)
+	if err != nil || g == nil {
+		writeError(w, http.StatusNotFound, "not found")
+		return
+	}
+	writeJSON(w, http.StatusOK, g)
+}
+
+func createGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	var g domain.Group
+	if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if g.Name == nil || strings.TrimSpace(*g.Name) == "" {
+		writeError(w, http.StatusBadRequest, "name required")
+		return
+	}
+	id, err := svc.CreateGroup(g)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]int64{"id": id})
+}
+
+func updateGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var g domain.Group
+	if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	g.ID = id
+	if err := svc.UpdateGroup(g); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func deleteGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err := svc.DeleteGroup(id); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func groupClients(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	members, err := svc.GetGroupClients(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, members)
+}
+
+func addClientToGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var body struct {
+		ClientID int64  `json:"client_id"`
+		Role     string `json:"role"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ClientID == 0 {
+		writeError(w, http.StatusBadRequest, "client_id required")
+		return
+	}
+	if body.Role == "" {
+		body.Role = "member"
+	}
+	if err := svc.AddClientToGroup(id, body.ClientID, body.Role); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func removeClientFromGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	var body struct {
+		ClientID int64 `json:"client_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.ClientID == 0 {
+		writeError(w, http.StatusBadRequest, "client_id required")
+		return
+	}
+	if err := svc.RemoveClientFromGroup(id, body.ClientID); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }

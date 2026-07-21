@@ -92,6 +92,15 @@ type Group struct {
 	Active     int     `json:"active"`
 }
 
+type GroupMember struct {
+	ID        int64  `json:"id"`
+	GroupID   int64  `json:"group_id"`
+	ClientID  int64  `json:"client_id"`
+	Role      string `json:"role"`
+	JoinedAt  string `json:"joined_at"`
+	ClientName string `json:"client_name,omitempty"`
+}
+
 type LessonStatus string
 
 const (
@@ -185,6 +194,8 @@ type ScheduleEntry struct {
 	CoachID    *int64       `json:"coach_id,omitempty"`
 	Duration   int          `json:"duration"`
 	Status     LessonStatus `json:"status"`
+	GroupID    *int64       `json:"group_id,omitempty"`
+	GroupName  *string      `json:"group_name,omitempty"`
 }
 
 // Recipient is a coach's client eligible for notifications.

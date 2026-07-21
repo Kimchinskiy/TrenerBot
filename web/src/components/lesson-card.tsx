@@ -2,7 +2,7 @@
 
 import { Card } from '@/components/ui/card'
 import type { ScheduleEntry } from '@/lib/types'
-import { Clock, User } from 'lucide-react'
+import { Clock, User, Users } from 'lucide-react'
 
 interface LessonCardProps {
   entry: ScheduleEntry
@@ -29,8 +29,8 @@ export function LessonCard({ entry, onClick }: LessonCardProps) {
           <span>{entry.duration} мин</span>
         </div>
         <div className="flex items-center gap-1.5 text-base font-bold text-foreground">
-          <User className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="truncate">{entry.client_name}</span>
+          {entry.group_name ? <Users className="h-4 w-4 text-muted-foreground shrink-0" /> : <User className="h-4 w-4 text-muted-foreground shrink-0" />}
+          <span className="truncate">{entry.group_name || entry.client_name}</span>
         </div>
       </div>
 

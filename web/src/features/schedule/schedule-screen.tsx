@@ -1,15 +1,16 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { useMe, useScheduleWeek, useChildrenLessonStatus } from '@/lib/hooks'
+import { useMe, useScheduleWeek, useChildrenLessonStatus, useGroupClients } from '@/lib/hooks'
 import { weekFromToday, prettyDateLong } from '@/lib/dates'
 import { ScreenHeader, Card, Spinner, Empty, ErrorBox } from '@/components/ui/screen'
 import { LessonCard } from '@/components/lesson-card'
-import type { ScheduleEntry } from '@/lib/types'
-import { Play, Clock, CheckCircle2, XCircle } from 'lucide-react'
+import type { ScheduleEntry, GroupMember } from '@/lib/types'
+import { Play, Clock, CheckCircle2, XCircle, Users, X, Loader2 } from 'lucide-react'
 import LinkChildSection from '@/features/parent/link-child-screen'
 import CreateTrainingModal from '@/components/create-training-modal'
 import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 
 function StatusBadge({ status }: { status: { is_ongoing: boolean; minutes_left?: number | null; minutes_until?: number | null; has_lesson_today: boolean; time: string } }) {
   if (status.is_ongoing) {
@@ -115,7 +116,9 @@ function CoachClientView({ role }: { role?: string }) {
   const { from, to } = useMemo(() => weekFromToday(), [])
   const { data, isLoading, error } = useScheduleWeek(from, to)
   const [showCreate, setShowCreate] = useState(false)
+  const [selectedGroup, setSelectedGroup] = useState<{ id: number; name: string } | null>(null)
   const isCoach = role === 'coach' || role === 'admin'
+  const { data: groupMembers, isLoading: membersLoading } = useGroupClients(selectedGroup?.id || 0)
 
   const byDay = useMemo(() => {
     const map = new Map<string, ScheduleEntry[]>()
@@ -139,7 +142,11 @@ function CoachClientView({ role }: { role?: string }) {
             <div className="mb-3 px-1 text-xs font-bold uppercase tracking-wider text-muted-foreground">{prettyDateLong(date)}</div>
             <div className="flex flex-col gap-1">
               {entries.map((e) => (
-                <LessonCard key={e.id} entry={e} />
+                <LessonCard
+                  key={e.id}
+                  entry={e}
+                  onClick={e.group_id ? () => setSelectedGroup({ id: e.group_id!, name: e.group_name || 'Группа' }) : undefined}
+                />
               ))}
             </div>
           </div>
@@ -152,6 +159,34 @@ function CoachClientView({ role }: { role?: string }) {
         >
           <Plus className="h-7 w-7" />
         </button>
+      )}
+
+      {selectedGroup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4" onClick={() => setSelectedGroup(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-background p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold flex items-center gap-2"><Users className="h-5 w-5" /> {selectedGroup.name}</h2>
+              <button onClick={() => setSelectedGroup(null)} className="rounded-full p-2 hover:bg-muted/60"><X className="h-5 w-5" /></button>
+            </div>
+            {membersLoading ? (
+              <div className="flex items-center justify-center py-6"><Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /></div>
+            ) : groupMembers && groupMembers.length > 0 ? (
+              <div className="flex flex-col gap-2 max-h-64 overflow-y-auto">
+                {groupMembers.map((m) => (
+                  <div key={m.client_id} className="flex items-center justify-between rounded-xl border border-border bg-background px-4 py-3">
+                    <span className="font-medium text-sm">{m.client_name}</span>
+                    <span className="text-xs text-muted-foreground capitalize">{m.role}</span>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">В этой группе пока нет участников</p>
+            )}
+            <div className="mt-4">
+              <Button className="w-full" onClick={() => { setSelectedGroup(null); window.location.href = `/dashboard/groups/${selectedGroup.id}` }}>Открыть группу</Button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )

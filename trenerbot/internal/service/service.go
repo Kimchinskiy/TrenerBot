@@ -895,3 +895,41 @@ func (s *Services) GetChildrenLessonStatuses(parentUserID int64) ([]domain.Child
 	}
 	return out, nil
 }
+
+// ---------- Groups ----------
+
+func (s *Services) ListGroups() ([]domain.Group, error) {
+	return s.Store.ListGroups()
+}
+
+func (s *Services) GetGroup(id int64) (*domain.Group, error) {
+	return s.Store.GetGroup(id)
+}
+
+func (s *Services) CreateGroup(g domain.Group) (int64, error) {
+	return s.Store.CreateGroup(g)
+}
+
+func (s *Services) UpdateGroup(g domain.Group) error {
+	return s.Store.UpdateGroup(g)
+}
+
+func (s *Services) DeleteGroup(id int64) error {
+	return s.Store.DeleteGroup(id)
+}
+
+func (s *Services) AddClientToGroup(groupID, clientID int64, role string) error {
+	return s.Store.AddClientToGroup(groupID, clientID, role)
+}
+
+func (s *Services) RemoveClientFromGroup(groupID, clientID int64) error {
+	return s.Store.RemoveClientFromGroup(groupID, clientID)
+}
+
+func (s *Services) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
+	return s.Store.GetGroupClients(groupID)
+}
+
+func (s *Services) GetClientGroups(clientID int64) ([]domain.Group, error) {
+	return s.Store.GetClientGroups(clientID)
+}

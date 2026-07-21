@@ -16,24 +16,31 @@ export function ScreenHeader({
   title,
   subtitle,
   onBack,
+  action,
 }: {
   title: string
   subtitle?: string
   onBack?: () => void
+  action?: React.ReactNode
 }) {
   return (
     <div className="px-4 pb-4 pt-6 flex flex-col gap-1.5">
-      {onBack && (
-        <button
-          onClick={onBack}
-          className="mb-1 -ml-1 text-sm font-semibold text-primary inline-flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all self-start"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          <span>Назад</span>
-        </button>
-      )}
-      <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
-      {subtitle && <p className="text-sm font-medium text-muted-foreground">{subtitle}</p>}
+      <div className="flex items-center justify-between">
+        <div className="flex-1">
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="mb-1 -ml-1 text-sm font-semibold text-primary inline-flex items-center gap-1 hover:opacity-90 active:scale-95 transition-all"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              <span>Назад</span>
+            </button>
+          )}
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">{title}</h1>
+          {subtitle && <p className="text-sm font-medium text-muted-foreground">{subtitle}</p>}
+        </div>
+        {action && <div className="ml-3">{action}</div>}
+      </div>
     </div>
   )
 }

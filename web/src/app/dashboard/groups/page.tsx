@@ -1,5 +1,5 @@
-import Placeholder from '@/features/placeholder/placeholder-screen'
+import GroupsScreen from '@/features/groups/groups-screen'
 
-export default function Page() {
-  return <Placeholder title="Группы" />
+export default function GroupsPage() {
+  return <GroupsScreen />
 }

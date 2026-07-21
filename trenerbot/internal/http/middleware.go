@@ -244,6 +244,16 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Get("/parent/children/status", func(w http.ResponseWriter, r *http.Request) { getChildrenStatus(svc, w, r) })
 		r.Get("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getParentNotifPrefs(svc, w, r) })
 		r.Post("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveParentNotifPrefs(svc, w, r) })
+
+		// Groups
+		r.Get("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listGroups))
+		r.Get("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getGroup))
+		r.Post("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createGroup))
+		r.Put("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateGroup))
+		r.Delete("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteGroup))
+		r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
+		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addClientToGroup))
+		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeClientFromGroup))
 	})
 
 	return r

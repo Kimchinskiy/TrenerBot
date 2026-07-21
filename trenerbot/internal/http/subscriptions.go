@@ -130,10 +130,8 @@ func linkChild(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if u.Role != domain.RoleParent {
-		if err := svc.Store.UpdateUserRole(u.ID, domain.RoleParent); err != nil {
-			writeError(w, http.StatusInternalServerError, "internal")
-			return
-		}
+		writeError(w, http.StatusForbidden, "parent only")
+		return
 	}
 	var body struct {
 		Code      string `json:"code"`

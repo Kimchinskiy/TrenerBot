@@ -240,7 +240,7 @@ export default function Profile() {
 
           {data.role === 'coach' && <CoachOnboarding />}
 
-          <ParentSection role={data.role} />
+          {data.role !== 'admin' && <ParentSection role={data.role} />}
 
           {data.role === 'parent' && data.children && data.children.length > 0 && (
             <div className="mt-4">

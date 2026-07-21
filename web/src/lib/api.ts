@@ -18,6 +18,8 @@ import type {
   ChildLessonStatus,
   ParentNotifPref,
   SocialLink,
+  Group,
+  GroupMember,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -247,14 +249,26 @@ export const endpoints = {
       method: 'POST',
       body: JSON.stringify({ from, text }),
     }),
-  createScheduleEntry: (data: { client_id: number; date: string; time: string; duration?: number }) =>
-    request<{ id: number }>('/schedule', { method: 'POST', body: JSON.stringify(data) }),
+  createScheduleEntry: (data: { client_id?: number; group_id?: number; date: string; time: string; duration?: number }) =>
+    request<{ ids: number[] }>('/schedule', { method: 'POST', body: JSON.stringify(data) }),
   socialMedia: () => request<Record<string, string>>('/social-media'),
   saveSocialLinks: (links: SocialLink[]) =>
     request<{ status: string }>('/social-media', {
       method: 'POST', body: JSON.stringify({ links }),
     }),
   clients: () => request<Client[]>('/clients'),
+  groups: () => request<Group[]>('/groups'),
+  group: (id: number) => request<Group>(`/groups/${id}`),
+  createGroup: (data: { name: string; coach_id?: number; max_members?: number; schedule?: string; price?: number; location?: string; active?: number }) =>
+    request<{ id: number }>('/groups', { method: 'POST', body: JSON.stringify(data) }),
+  updateGroup: (id: number, data: { name?: string; coach_id?: number; max_members?: number; schedule?: string; price?: number; location?: string; active?: number }) =>
+    request<{ status: string }>(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteGroup: (id: number) => request<{ status: string }>(`/groups/${id}`, { method: 'DELETE' }),
+  groupClients: (id: number) => request<GroupMember[]>(`/groups/${id}/clients`),
+  addClientToGroup: (id: number, clientId: number, role?: string) =>
+    request<{ status: string }>(`/groups/${id}/clients`, { method: 'POST', body: JSON.stringify({ client_id: clientId, role }) }),
+  removeClientFromGroup: (id: number, clientId: number) =>
+    request<{ status: string }>(`/groups/${id}/clients`, { method: 'DELETE', body: JSON.stringify({ client_id: clientId }) }),
   faq: (q: string) => request<{ answer: string }>(`/faq?q=${encodeURIComponent(q)}`),
   dateAttendance: (date: string) => request<DateAttendanceResponse>(`/attendance/date/${date}`),
   saveDateAttendance: (date: string, entries: SaveAttendanceEntry[]) =>
