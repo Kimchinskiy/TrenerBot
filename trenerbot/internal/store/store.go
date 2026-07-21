@@ -1,7 +1,9 @@
 package store
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"strings"
@@ -302,7 +304,7 @@ func (s *Store) UpdateClient(c domain.Client) error {
 }
 
 func (s *Store) ListClients() ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL AND full_name != '/menu' AND id IN (SELECT MIN(id) FROM clients GROUP BY full_name) ORDER BY full_name`)
+	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL ORDER BY full_name`)
 	if err != nil {
 		return nil, err
 	}
@@ -729,6 +731,47 @@ func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([
 	return out, rows.Err()
 }
 
+// ReminderEntry is the data needed for sending lesson reminders.
+type ReminderEntry struct {
+	ClientID   int64
+	UserID     int64
+	LessonID   int64
+	Date       string
+	Time       string
+	Location   *string
+	CoachID    *int64
+}
+
+// ListLessonEntriesForReminders returns planned lesson entries within [from, to]
+// joined with the client's user_id for notification delivery.
+func (s *Store) ListLessonEntriesForReminders(from, to string) ([]ReminderEntry, error) {
+	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.user_id, le.coach_id
+		FROM lesson_entries le
+		JOIN clients c ON c.id = le.client_id
+		WHERE le.date >= ? AND le.date <= ? AND le.status = 'planned'
+		ORDER BY le.date, le.time`, from, to)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []ReminderEntry
+	for rows.Next() {
+		var e ReminderEntry
+		var uid, coachID sql.NullInt64
+		if err := rows.Scan(&e.LessonID, &e.Date, &e.Time, &e.ClientID, &uid, &coachID); err != nil {
+			return nil, err
+		}
+		if uid.Valid {
+			e.UserID = uid.Int64
+		}
+		if coachID.Valid {
+			e.CoachID = &coachID.Int64
+		}
+		out = append(out, e)
+	}
+	return out, rows.Err()
+}
+
 // ---------- Coach notification recipients ----------
 
 // ListCoachRecipients returns distinct clients who have lesson entries
@@ -978,6 +1021,55 @@ func (s *Store) LinkParentToChild(parentUserID int64, childClientID int64) error
 
 func (s *Store) ListChildLessonEntries(childID int64, from, to string) ([]domain.ScheduleEntry, error) {
 	return s.ListScheduleEntries(from, to, 0, childID)
+}
+
+// ---------- Parent invite codes ----------
+
+func (s *Store) CreateInviteCode(clientID, createdBy int64, expiresAt string) (string, error) {
+	const charset = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+	code := make([]byte, 6)
+	for {
+		for i := range code {
+			var b [1]byte
+			if _, err := rand.Read(b[:]); err != nil {
+				return "", err
+			}
+			code[i] = charset[int(b[0])%len(charset)]
+		}
+		c := string(code)
+		var exists int
+		err := s.DB.QueryRow(`SELECT 1 FROM parent_invite_codes WHERE code = ? AND used_at IS NULL AND expires_at > datetime('now')`, c).Scan(&exists)
+		if err != nil && err != sql.ErrNoRows {
+			return "", err
+		}
+		if exists == 0 {
+			_, err = s.DB.Exec(`INSERT INTO parent_invite_codes(client_id, code, created_by, expires_at) VALUES (?,?,?,?)`, clientID, c, createdBy, expiresAt)
+			if err != nil {
+				return "", err
+			}
+			return c, nil
+		}
+	}
+}
+
+func (s *Store) UseInviteCode(code string) (int64, error) {
+	var clientID int64
+	var usedAt sql.NullString
+	err := s.DB.QueryRow(`SELECT client_id, used_at FROM parent_invite_codes WHERE code = ? AND expires_at > datetime('now')`, code).Scan(&clientID, &usedAt)
+	if err == sql.ErrNoRows {
+		return 0, fmt.Errorf("invite code not found or expired")
+	}
+	if err != nil {
+		return 0, err
+	}
+	if usedAt.Valid {
+		return 0, fmt.Errorf("invite code already used")
+	}
+	_, err = s.DB.Exec(`UPDATE parent_invite_codes SET used_at = datetime('now') WHERE code = ?`, code)
+	if err != nil {
+		return 0, err
+	}
+	return clientID, nil
 }
 
 func (s *Store) UpsertParentNotifPref(pref domain.ParentNotifPref) error {

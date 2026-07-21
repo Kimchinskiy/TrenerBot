@@ -122,14 +122,13 @@ func upgradeToParent(svc *service.Services, w http.ResponseWriter, r *http.Reque
 	})
 }
 
-// POST /api/parent/link — link parent to child by birth date verification.
+// POST /api/parent/link — link parent to child by invite code or birth date verification.
 func linkChild(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	u := UserFrom(r.Context())
 	if u == nil {
 		writeError(w, http.StatusUnauthorized, "unauthorized")
 		return
 	}
-	// Ensure user is a parent
 	if u.Role != domain.RoleParent {
 		if err := svc.Store.UpdateUserRole(u.ID, domain.RoleParent); err != nil {
 			writeError(w, http.StatusInternalServerError, "internal")
@@ -137,6 +136,7 @@ func linkChild(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	var body struct {
+		Code      string `json:"code"`
 		FullName  string `json:"full_name"`
 		BirthDate string `json:"birth_date"`
 	}
@@ -144,27 +144,43 @@ func linkChild(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
-	if body.FullName == "" || body.BirthDate == "" {
-		writeError(w, http.StatusBadRequest, "full_name and birth_date required")
-		return
+
+	var clientID int64
+	var childName string
+
+	if body.Code != "" {
+		cid, err := svc.UseInviteCode(body.Code)
+		if err != nil {
+			writeError(w, http.StatusNotFound, "Код недействителен или истёк")
+			return
+		}
+		clientID = cid
+	} else {
+		if body.FullName == "" || body.BirthDate == "" {
+			writeError(w, http.StatusBadRequest, "требуется code или full_name + birth_date")
+			return
+		}
+		client, err := svc.FindChildByBirthDate(body.FullName, body.BirthDate)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "internal")
+			return
+		}
+		if client == nil {
+			writeError(w, http.StatusNotFound, "Ребёнок с такими данными не найден")
+			return
+		}
+		clientID = client.ID
+		childName = client.FullName
 	}
-	client, err := svc.FindChildByBirthDate(body.FullName, body.BirthDate)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, "internal")
-		return
-	}
-	if client == nil {
-		writeError(w, http.StatusNotFound, "Ребёнок с такими данными не найден")
-		return
-	}
-	if err := svc.LinkParentToChild(u.ID, client.ID); err != nil {
+
+	if err := svc.LinkParentToChild(u.ID, clientID); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":    "ok",
-		"child_id":  client.ID,
-		"child_name": client.FullName,
+		"child_id":  clientID,
+		"child_name": childName,
 	})
 }
 
@@ -285,6 +301,35 @@ func startCoachTrial(svc *service.Services, w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":       "ok",
 		"subscription": sub,
+	})
+}
+
+// POST /api/coach/invite-code — generate a parent invite code for a client (coach only).
+func createInviteCode(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	u := UserFrom(r.Context())
+	if u == nil {
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+		return
+	}
+	var body struct {
+		ClientID int64 `json:"client_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if body.ClientID <= 0 {
+		writeError(w, http.StatusBadRequest, "client_id required")
+		return
+	}
+	code, err := svc.CreateInviteCode(body.ClientID, u.ID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": "ok",
+		"code":   code,
 	})
 }
 

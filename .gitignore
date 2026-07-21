@@ -1,10 +1,17 @@
 # Build artifacts
 bin/
+*.exe
 *.exe~
 dist/
 
 # Go build cache
 .gocache/
+
+# Trenerbot stray files
+trenerbot/server.exe
+trenerbot/bot.exe
+trenerbot/listusers.go
+trenerbot/server.go
 
 # Node
 node_modules/
@@ -40,6 +47,12 @@ Thumbs.db
 .env.local
 .env.production.local
 .env.development.local
+
+# Data
+data/
+
+# Dev artifacts
+web/dev.err
 
 # Logs
 *.log

@@ -281,8 +281,9 @@ func (s *Services) NotifyLessonCanceled(lessonID int64, reason string) error {
 
 // ReapStaleClaimed returns 'claimed' rows that were never acknowledged within timeout back to 'pending'.
 func (s *Services) ReapStaleClaimed(timeout time.Duration) (int64, error) {
+	cutoff := time.Now().Add(-timeout).Format("2006-01-02 15:04:05")
 	res, err := s.Store.DB.Exec(`UPDATE notifications SET status='pending', claim_token=NULL
-		WHERE status='claimed' AND sent_at < datetime('now', ?)`, "-"+timeout.String())
+		WHERE status='claimed' AND sent_at < ?`, cutoff)
 	if err != nil {
 		return 0, err
 	}
@@ -296,41 +297,30 @@ func (s *Services) EnsureReminders() (int, error) {
 	now := time.Now()
 	from := now.Format("2006-01-02")
 	to := now.AddDate(0, 0, 1).Format("2006-01-02")
-	lessons, err := s.Store.ListLessons(from, to, 0)
+	entries, err := s.Store.ListLessonEntriesForReminders(from, to)
 	if err != nil {
 		return 0, err
 	}
 	count := 0
-	for _, l := range lessons {
-		if l.Status == domain.LessonCanceled || l.Status == domain.LessonMoved {
+	for _, e := range entries {
+		if e.UserID == 0 {
 			continue
 		}
-		parts, err := s.Store.LessonParticipants(l.ID)
-		if err != nil {
-			continue
-		}
-		sendAt, err := time.Parse("2006-01-02 15:04:05", l.Date+" 08:00:00")
+		sendAt, err := time.Parse("2006-01-02 15:04:05", e.Date+" 08:00:00")
 		if err != nil || sendAt.Before(now) {
 			continue
 		}
-		for _, cid := range parts {
-			c, err := s.Store.ClientByID(cid)
-			if err != nil || c == nil || c.UserID == nil {
-				continue
-			}
-			payload, _ := json.Marshal(map[string]any{
-				"lesson_id": l.ID,
-				"date":      l.Date,
-				"time":      l.Time,
-				"location":  l.Location,
-			})
-			exists, err := s.Store.NotificationExists("lesson_reminder", *c.UserID, string(payload))
-			if err != nil || exists {
-				continue
-			}
-			if err := s.enqueue(*c.UserID, "lesson_reminder", string(payload), sendAt); err == nil {
-				count++
-			}
+		payload, _ := json.Marshal(map[string]any{
+			"lesson_id": e.LessonID,
+			"date":      e.Date,
+			"time":      e.Time,
+		})
+		exists, err := s.Store.NotificationExists("lesson_reminder", e.UserID, string(payload))
+		if err != nil || exists {
+			continue
+		}
+		if err := s.enqueue(e.UserID, "lesson_reminder", string(payload), sendAt); err == nil {
+			count++
 		}
 	}
 	return count, nil
@@ -810,6 +800,15 @@ func (s *Services) FindChildByBirthDate(fullName, birthDate string) (*domain.Cli
 
 func (s *Services) LinkParentToChild(parentUserID int64, childClientID int64) error {
 	return s.Store.LinkParentToChild(parentUserID, childClientID)
+}
+
+func (s *Services) CreateInviteCode(clientID, createdBy int64) (string, error) {
+	expiresAt := time.Now().Add(72 * time.Hour).Format("2006-01-02 15:04:05")
+	return s.Store.CreateInviteCode(clientID, createdBy, expiresAt)
+}
+
+func (s *Services) UseInviteCode(code string) (int64, error) {
+	return s.Store.UseInviteCode(code)
 }
 
 func (s *Services) GetParentNotifPrefs(parentUserID int64) ([]domain.ParentNotifPref, error) {

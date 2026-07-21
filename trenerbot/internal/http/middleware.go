@@ -207,6 +207,9 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Post("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addToWaitingList))
 		r.Delete("/waiting-list/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeFromWaitingList))
 
+		// Invite codes for parent binding
+		r.Post("/coach/invite-code", guard(svc, []domain.Role{domain.RoleCoach}, createInviteCode))
+
 		// Lesson notifications
 		r.Post("/lessons/{id}/notify", guard(svc, []domain.Role{domain.RoleCoach}, notifyLessonChange))
 
