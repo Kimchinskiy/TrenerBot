@@ -169,10 +169,18 @@ function MenuItem({ icon: Icon, label, onClick, variant }: { icon: React.Element
   )
 }
 
+const UNDER_DEVELOPMENT = 'Раздел находится в разработке'
+
 export default function Profile() {
   const router = useRouter()
   const { data, isLoading, error } = useMe()
   const { forceGuest } = useAuth()
+  const [devMsg, setDevMsg] = useState('')
+
+  const showDev = (label: string) => {
+    setDevMsg(`«${label}» — ${UNDER_DEVELOPMENT.toLowerCase()}`)
+    setTimeout(() => setDevMsg(''), 3000)
+  }
 
   const handleLogout = async () => {
     await logout()
@@ -212,18 +220,25 @@ export default function Profile() {
           {/* Coach onboarding */}
           {data.role === 'coach' && <CoachOnboarding />}
 
+          {/* Dev message */}
+          {devMsg && (
+            <div className="rounded-2xl border border-border/30 bg-muted/50 px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+              {devMsg}
+            </div>
+          )}
+
           {/* Menu */}
           <div className="flex flex-col gap-2">
             {(data.role === 'coach' || data.role === 'admin') && (
               <>
                 <MenuItem icon={Users} label="Мои клиенты" onClick={() => router.push('/dashboard/clients')} />
                 <MenuItem icon={Calendar} label="Мой график" onClick={() => router.push('/dashboard/schedule')} />
-                <MenuItem icon={BarChart3} label="Статистика" onClick={() => {}} />
+                <MenuItem icon={BarChart3} label="Статистика" onClick={() => showDev('Статистика')} />
                 <MenuItem icon={Bell} label="Оповестить клиентов" onClick={() => router.push('/dashboard/notifications')} />
               </>
             )}
-            <MenuItem icon={Settings} label="Настройки" onClick={() => {}} />
-            <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => {}} />
+            <MenuItem icon={Settings} label="Настройки" onClick={() => showDev('Настройки')} />
+            <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => showDev('Поддержка')} />
           </div>
 
           {/* Logout */}

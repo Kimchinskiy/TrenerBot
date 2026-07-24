@@ -21,6 +21,13 @@ import (
 func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Add security headers
+			w.Header().Set("X-Content-Type-Options", "nosniff")
+			w.Header().Set("X-Frame-Options", "DENY")
+			w.Header().Set("X-XSS-Protection", "1; mode=block")
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;")
+
 			svcToken := r.Header.Get("X-Service-Token")
 			if svcToken != "" && svcToken == cfg.ServiceToken {
 				tgID := r.Header.Get("X-Telegram-Id")
@@ -28,6 +35,11 @@ func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler
 					// system/bot account (e.g. polling the notification outbox)
 					sys := &domain.User{ID: 0, Role: domain.RoleAdmin}
 					next.ServeHTTP(w, r.WithContext(withUser(r.Context(), sys)))
+					return
+				}
+				// Validate telegram ID format (basic validation)
+				if len(tgID) < 5 || len(tgID) > 15 {
+					writeError(w, http.StatusBadRequest, "invalid telegram_id")
 					return
 				}
 				u, err := svc.Store.UserByTelegram(tgID)
@@ -61,6 +73,56 @@ func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler
 			}
 
 			writeError(w, http.StatusUnauthorized, "unauthorized")
+		})
+	}
+}
+
+// CORS settings for cross-origin requests
+func corsAllow(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		slog.Info("cors request", "origin", r.Header.Get("Origin"))
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Rate limiting middleware to prevent abuse
+func RateLimiter(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
+	// Simple in-memory rate limiter per IP
+	type client struct {
+		count     int
+		resetTime  time.Time
+	}
+	clients := make(map[string]*client)
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ip := r.RemoteAddr
+			now := time.Now()
+
+			// Clean old clients
+			for ip, c := range clients {
+				if now.After(c.resetTime) {
+					delete(clients, ip)
+				}
+			}
+
+			// Get or create client
+			c, exists := clients[ip]
+			if !exists {
+				clients[ip] = &client{count: 1, resetTime: now.Add(window)}
+				c = clients[ip]
+			}
+
+			// Check if rate limit exceeded
+			if c.count >= maxRequests {
+				slog.Warn("rate limit exceeded", "ip", ip, "count", c.count)
+				writeError(w, http.StatusTooManyRequests, "too many requests")
+				return
+			}
+
+			// Increment count
+			c.count++
+			next.ServeHTTP(w, r)
 		})
 	}
 }

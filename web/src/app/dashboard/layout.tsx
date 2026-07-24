@@ -4,7 +4,7 @@ import { useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useAuth } from '@/components/auth-provider'
 import FloatingNavbar, { type FloatingNavItem } from '@/components/ui/floating-navbar'
-import { Home, CalendarDays, Users, CheckCircle, User } from 'lucide-react'
+import { Home, CalendarDays, Users, CheckCircle, User, Layers } from 'lucide-react'
 import { useMe } from '@/lib/hooks'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -36,6 +36,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       icon: <CalendarDays className="h-5 w-5" />,
       href: '/dashboard/schedule',
     },
+    ...(me?.role === 'coach' || me?.role === 'admin'
+      ? [
+          {
+            label: 'Группы',
+            icon: <Layers className="h-5 w-5" />,
+            href: '/dashboard/groups',
+          },
+        ]
+      : []),
     ...(me?.role === 'coach' || me?.role === 'admin'
       ? [
           {

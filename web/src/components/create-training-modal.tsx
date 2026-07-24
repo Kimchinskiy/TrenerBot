@@ -92,7 +92,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div
         className="w-full max-w-lg rounded-3xl bg-white p-5 pb-8 shadow-elevated fade-in"
         onClick={(e) => e.stopPropagation()}
@@ -162,6 +162,12 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                   placeholder={mode === 'client' ? 'Поиск по фамилии...' : 'Поиск по названию...'}
                   className="w-full rounded-2xl border border-border/60 bg-white pl-10 pr-4 py-3 text-sm"
                 />
+                {mode === 'group' && !selectedGroup && !searchQuery.trim() && groups && groups.length === 0 && (
+                  <div className="mt-2 rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-3 text-center">
+                    <p className="text-sm font-medium text-muted-foreground">У вас ещё нет групп</p>
+                    <p className="text-xs text-muted-foreground mt-1">Создайте группу в разделе «Группы»</p>
+                  </div>
+                )}
                 {showResults && searchQuery.trim() && (
                   <div className="absolute z-10 mt-1 w-full rounded-2xl border border-border/50 bg-white shadow-elevated max-h-48 overflow-y-auto">
                     {(mode === 'client' ? filteredClients : filteredGroups).length === 0 ? (

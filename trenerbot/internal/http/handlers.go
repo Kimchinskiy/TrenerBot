@@ -136,14 +136,13 @@ func bindCoachTelegram(svc *service.Services, w http.ResponseWriter, r *http.Req
 		writeError(w, http.StatusBadRequest, "telegram_id required")
 		return
 	}
-	// fetch coach to get its user_id
-	row := svc.Store.DB.QueryRow(`SELECT user_id FROM coaches WHERE id = ?`, id)
-	var uid int64
-	if err := row.Scan(&uid); err != nil {
+	// fetch coach to get its user_id using repository method
+	coach, err := svc.Store.CoachByID(id)
+	if err != nil || coach == nil {
 		writeError(w, http.StatusNotFound, "coach not found")
 		return
 	}
-	if err := svc.SetTelegramID(uid, body.TelegramID); err != nil {
+	if err := svc.SetTelegramID(*coach.UserID, body.TelegramID); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}

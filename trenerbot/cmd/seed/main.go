@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"time"
@@ -31,10 +30,10 @@ func main() {
 			if _, err := s.CreateUser(&id, domain.RoleAdmin); err != nil {
 				slog.Error("create admin", "err", err)
 			} else {
-				fmt.Println("admin created:", id)
+				slog.Info("admin created", "id", id)
 			}
 		} else {
-			fmt.Println("admin already exists:", id)
+			slog.Info("admin already exists", "id", id)
 		}
 	}
 
@@ -70,7 +69,7 @@ func main() {
 }
 
 func seedTestData(s *store.Store, coachUserID int64) {
-	fmt.Println("Seeding test data...")
+	slog.Info("Seeding test data")
 
 	// Get coach ID
 	coach, err := s.CoachByUserID(coachUserID)

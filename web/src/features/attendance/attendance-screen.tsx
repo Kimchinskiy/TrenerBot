@@ -41,9 +41,9 @@ export default function AttendanceScreen() {
   const [saveError, setSaveError] = useState('')
 
   useEffect(() => {
-    if (!data) return
+    if (!data?.clients) return
     const s: Record<number, boolean> = {}
-    data.clients.forEach((c) => {
+    ;(data.clients ?? []).forEach((c) => {
       s[c.client_id] = c.present ?? false
     })
     setDraft(s)
@@ -92,8 +92,7 @@ export default function AttendanceScreen() {
 
   const clientsByTime = useMemo(() => {
     const map = new Map<string, DateAttendanceClient[]>()
-    if (!data) return map
-    data.clients.forEach((c) => {
+    ;(data?.clients ?? []).forEach((c) => {
       const arr = map.get(c.time) || []
       arr.push(c)
       map.set(c.time, arr)
@@ -130,11 +129,11 @@ export default function AttendanceScreen() {
           <span className="text-sm font-bold text-foreground">{fmtWeekday(today)}, {fmtDate(today)}</span>
         </div>
 
-        {(!data || data.clients.length === 0) && (
+        {(!data?.clients || data.clients.length === 0) && (
           <Empty text="Сегодня нет тренировок" />
         )}
 
-        {data && Array.from(clientsByTime.entries()).map(([time, clients]) => (
+        {data?.clients && Array.from(clientsByTime.entries()).map(([time, clients]) => (
           <div key={time} className="mb-5">
             <div className="mb-2.5 text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">{time}</div>
             <div className="flex flex-col gap-2">
