@@ -4,9 +4,10 @@ import { Providers } from '@/components/providers'
 import { AuthProvider } from '@/components/auth-provider'
 import { ApplyTheme } from '@/components/apply-theme'
 export const metadata: Metadata = {
-  title: 'Плавли — Спортивная CRM',
-  description: 'Мобильное приложение тренера и клиента',
+  title: 'Плавли',
+  description: 'Веб-приложение тренера и клиента',
   manifest: '/manifest.webmanifest',
+  icons: [{ rel: 'icon', url: '/icon3.svg', type: 'image/svg+xml' }],
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',

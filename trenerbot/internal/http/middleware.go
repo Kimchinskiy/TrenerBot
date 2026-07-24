@@ -77,14 +77,6 @@ func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler
 	}
 }
 
-// CORS settings for cross-origin requests
-func corsAllow(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		slog.Info("cors request", "origin", r.Header.Get("Origin"))
-		next.ServeHTTP(w, r)
-	})
-}
-
 // Rate limiting middleware to prevent abuse
 func RateLimiter(maxRequests int, window time.Duration) func(http.Handler) http.Handler {
 	// Simple in-memory rate limiter per IP

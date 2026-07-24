@@ -411,6 +411,22 @@ func (s *Store) CoachByUserID(userID int64) (*domain.Coach, error) {
 	return co, nil
 }
 
+func (s *Store) CoachByID(id int64) (*domain.Coach, error) {
+	co := &domain.Coach{}
+	var photo, contacts, position, sport, schedule, groupIDs sql.NullString
+	err := s.DB.QueryRow(`SELECT id, user_id, full_name, photo, contacts, position, sport, schedule, group_ids
+		FROM coaches WHERE id = ?`, id).
+		Scan(&co.ID, &co.UserID, &co.FullName, &photo, &contacts, &position, &sport, &schedule, &groupIDs)
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	assignCoachNulls(co, photo, contacts, position, sport, schedule, groupIDs)
+	return co, nil
+}
+
 func assignCoachNulls(co *domain.Coach, photo, contacts, position, sport, schedule, groupIDs sql.NullString) {
 	if photo.Valid {
 		v := photo.String
