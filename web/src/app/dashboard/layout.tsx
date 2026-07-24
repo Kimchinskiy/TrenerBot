@@ -45,15 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           },
         ]
       : []),
-    ...(me?.role === 'coach' || me?.role === 'admin'
-      ? [
-          {
-            label: 'Клиенты',
-            icon: <Users className="h-5 w-5" />,
-            href: '/dashboard/clients',
-          },
-        ]
-      : []),
     {
       label: 'Посещаемость',
       icon: <CheckCircle className="h-5 w-5" />,

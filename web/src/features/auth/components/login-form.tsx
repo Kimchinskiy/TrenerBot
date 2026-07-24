@@ -55,7 +55,7 @@ export function LoginForm() {
   return (
     <div className="min-h-screen flex flex-col justify-center px-4 py-8">
       <div className="w-full max-w-md mx-auto">
-        <ScreenHeader title="Вход" subtitle="Спортивная CRM система" />
+        <ScreenHeader title="Вход" />
         
         <Card className="mt-2 flex flex-col gap-4 shadow-lg border-border/80">
           {serverError && <ErrorBox error={new Error(serverError)} />}

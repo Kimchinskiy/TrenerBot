@@ -207,6 +207,42 @@ export function useSaveParentNotifPref() {
   })
 }
 
+// --- Client Subscriptions ---
+export function useClientSubscriptions(clientId: number) {
+  return useQuery({
+    queryKey: ['client-subscriptions', clientId],
+    queryFn: () => endpoints.clientSubscriptions(clientId),
+    enabled: !!clientId,
+  })
+}
+
+export function useCreateClientSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { client_id: number; type: string; price?: number; ends_at?: string; lessons_left?: number }) =>
+      endpoints.createClientSubscription(data),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['client-subscriptions', vars.client_id] }),
+  })
+}
+
+export function useUpdateClientSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { id: number; client_id: number; type?: string; price?: number; ends_at?: string; lessons_left?: number; freeze?: number }) =>
+      endpoints.updateClientSubscription(data),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['client-subscriptions', vars.client_id] }),
+  })
+}
+
+export function useDeleteClientSubscription() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ clientId, id }: { clientId: number; id: number }) =>
+      endpoints.deleteClientSubscription(clientId, id),
+    onSuccess: (_, vars) => qc.invalidateQueries({ queryKey: ['client-subscriptions', vars.clientId] }),
+  })
+}
+
 // --- Groups ---
 export function useGroups() {
   return useQuery({ queryKey: ['groups'], queryFn: () => endpoints.groups() })

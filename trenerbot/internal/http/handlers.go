@@ -402,10 +402,10 @@ func getReport(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 
 func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	u := UserFrom(r.Context())
-	co, err := svc.CoachByUser(u.ID)
-	if err != nil || co == nil {
-		writeError(w, http.StatusForbidden, "coach only")
-		return
+	co, _ := svc.CoachByUser(u.ID)
+	var coachID *int64
+	if co != nil {
+		coachID = &co.ID
 	}
 	var body struct {
 		ClientID int64  `json:"client_id"`
@@ -442,7 +442,7 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 				Date:     body.Date,
 				Time:     body.Time,
 				ClientID: m.ClientID,
-				CoachID:  &co.ID,
+				CoachID:  coachID,
 				Duration: body.Duration,
 				Status:   domain.LessonPlanned,
 				GroupID:  &body.GroupID,
@@ -458,7 +458,7 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 			Date:     body.Date,
 			Time:     body.Time,
 			ClientID: body.ClientID,
-			CoachID:  &co.ID,
+			CoachID:  coachID,
 			Duration: body.Duration,
 			Status:   domain.LessonPlanned,
 		})
@@ -813,6 +813,9 @@ func createGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) 
 		writeError(w, http.StatusBadRequest, "name required")
 		return
 	}
+	if g.Active == 0 {
+		g.Active = 1
+	}
 	id, err := svc.CreateGroup(g)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
@@ -869,6 +872,62 @@ func addClientToGroup(svc *service.Services, w http.ResponseWriter, r *http.Requ
 		body.Role = "member"
 	}
 	if err := svc.AddClientToGroup(id, body.ClientID, body.Role); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+// ---------- Client Subscriptions ----------
+
+func listClientSubscriptions(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	clientID, _ := strconv.ParseInt(chi.URLParam(r, "client_id"), 10, 64)
+	subs, err := svc.ClientSubscriptions(clientID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, subs)
+}
+
+func createClientSubscription(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	var sub domain.ClientSubscription
+	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if sub.ClientID == 0 || sub.Type == "" {
+		writeError(w, http.StatusBadRequest, "client_id and type required")
+		return
+	}
+	id, err := svc.CreateClientSubscription(sub)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]int64{"id": id})
+}
+
+func updateClientSubscription(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	var sub domain.ClientSubscription
+	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
+		writeError(w, http.StatusBadRequest, "bad json")
+		return
+	}
+	if sub.ID == 0 {
+		writeError(w, http.StatusBadRequest, "id required")
+		return
+	}
+	if err := svc.UpdateClientSubscription(sub); err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func deleteClientSubscription(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	if err := svc.DeleteClientSubscription(id); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}

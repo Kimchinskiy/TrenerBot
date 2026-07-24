@@ -1052,6 +1052,45 @@ func (s *Store) ExtendCoachSubscription(coachID int64, days int) error {
 	return err
 }
 
+// ---------- Client Subscriptions ----------
+
+func (s *Store) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription, error) {
+	rows, err := s.DB.Query(`SELECT id, client_id, type, price, bought_at, ends_at, lessons_left, freeze, created_at FROM subscriptions WHERE client_id = ? ORDER BY created_at DESC`, clientID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.ClientSubscription
+	for rows.Next() {
+		var sub domain.ClientSubscription
+		if err := rows.Scan(&sub.ID, &sub.ClientID, &sub.Type, &sub.Price, &sub.BoughtAt, &sub.EndsAt, &sub.LessonsLeft, &sub.Freeze, &sub.CreatedAt); err != nil {
+			return nil, err
+		}
+		out = append(out, sub)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) CreateClientSubscription(sub domain.ClientSubscription) (int64, error) {
+	res, err := s.DB.Exec(`INSERT INTO subscriptions(client_id, type, price, bought_at, ends_at, lessons_left, freeze) VALUES(?,?,?,?,?,?,?)`,
+		sub.ClientID, sub.Type, sub.Price, sub.BoughtAt, sub.EndsAt, sub.LessonsLeft, sub.Freeze)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+func (s *Store) UpdateClientSubscription(sub domain.ClientSubscription) error {
+	_, err := s.DB.Exec(`UPDATE subscriptions SET type=?, price=?, ends_at=?, lessons_left=?, freeze=? WHERE id=? AND client_id=?`,
+		sub.Type, sub.Price, sub.EndsAt, sub.LessonsLeft, sub.Freeze, sub.ID, sub.ClientID)
+	return err
+}
+
+func (s *Store) DeleteClientSubscription(id int64) error {
+	_, err := s.DB.Exec(`DELETE FROM subscriptions WHERE id = ?`, id)
+	return err
+}
+
 // ---------- Parent features ----------
 
 func (s *Store) ClientByBirthDate(fullName, birthDate string) (*domain.Client, error) {

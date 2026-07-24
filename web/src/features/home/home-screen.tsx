@@ -1,13 +1,13 @@
 'use client'
 
 import { useMemo } from 'react'
-import { useMe, useScheduleWeek, useClients } from '@/lib/hooks'
+import { useRouter } from 'next/navigation'
+import { useMe, useScheduleWeek } from '@/lib/hooks'
 import { weekFromToday } from '@/lib/dates'
-import { StatCard } from '@/components/ui/stat-card'
 import { WaveDivider } from '@/components/ui/wave-divider'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
-import { Users, Calendar, TrendingUp, Clock, ArrowRight, Droplets } from 'lucide-react'
+import { Calendar, Clock, ArrowRight, Bell, CheckCircle, Users } from 'lucide-react'
 import Link from 'next/link'
 
 function getGreeting(): string {
@@ -26,9 +26,25 @@ function TodayLessons({ entries }: { entries: { time: string; client_name: strin
     )
   }
 
+  if (entries.length > 5) {
+    return (
+      <div className="rounded-2xl bg-white p-5 shadow-card border border-border/30 text-center">
+        <p className="text-base font-bold text-foreground mb-1">
+          Сегодня запланировано {entries.length} тренировок
+        </p>
+        <Link
+          href="/dashboard/schedule"
+          className="inline-flex items-center gap-1 mt-2 text-sm font-semibold text-primary"
+        >
+          Перейти к расписанию <ArrowRight className="h-3 w-3" />
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col gap-2">
-      {entries.slice(0, 4).map((e, i) => (
+      {entries.map((e, i) => (
         <div
           key={i}
           className="flex items-center gap-3 rounded-2xl bg-white p-3.5 shadow-card border border-border/30"
@@ -52,20 +68,15 @@ function TodayLessons({ entries }: { entries: { time: string; client_name: strin
           )}
         </div>
       ))}
-      {entries.length > 4 && (
-        <Link href="/dashboard/schedule" className="text-center text-sm font-semibold text-primary py-1">
-          Все тренировки ({entries.length})
-        </Link>
-      )}
     </div>
   )
 }
 
 export default function HomeScreen() {
+  const router = useRouter()
   const { data: me, isLoading: meLoading } = useMe()
   const { from, to } = useMemo(() => weekFromToday(), [])
   const { data: schedule, isLoading: schedLoading } = useScheduleWeek(from, to)
-  const { data: clients, isLoading: clientsLoading } = useClients()
 
   const today = useMemo(() => {
     const d = new Date()
@@ -80,15 +91,9 @@ export default function HomeScreen() {
     return schedule.filter((e) => e.date === today).sort((a, b) => a.time.localeCompare(b.time))
   }, [schedule, today])
 
-  const weekStats = useMemo(() => {
-    if (!schedule) return { lessons: 0, attendance: '0%' }
-    const uniqueClients = new Set(schedule.map((e) => e.client_id)).size
-    return { lessons: schedule.length, clients: uniqueClients }
-  }, [schedule])
-
   const firstName = me?.client?.full_name?.split(' ')[0] || me?.role === 'parent' ? 'Родитель' : 'Тренер'
 
-  if (meLoading || schedLoading || clientsLoading) {
+  if (meLoading || schedLoading) {
     return (
       <div className="px-5 pt-6">
         <div className="h-8 w-48 shimmer rounded-xl mb-6" />
@@ -108,9 +113,12 @@ export default function HomeScreen() {
               {firstName}!
             </h1>
           </div>
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10">
-            <Droplets className="h-5 w-5 text-primary" />
-          </div>
+          <button
+            onClick={() => router.push('/dashboard/notifications')}
+            className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 active:scale-90 transition-transform"
+          >
+            <Bell className="h-5 w-5 text-primary" />
+          </button>
         </div>
       </div>
 
@@ -126,31 +134,6 @@ export default function HomeScreen() {
             </Link>
           </div>
           <TodayLessons entries={todayLessons} />
-        </section>
-
-        {/* Quick stats */}
-        <section>
-          <h2 className="text-heading font-bold text-foreground mb-3">Статистика</h2>
-          <div className="grid grid-cols-3 gap-3">
-            <StatCard
-              label="Клиенты"
-              value={clients?.length || 0}
-              icon={Users}
-              variant="primary"
-            />
-            <StatCard
-              label="Тренировки"
-              value={weekStats.lessons}
-              icon={Calendar}
-              variant="default"
-            />
-            <StatCard
-              label="На неделе"
-              value={weekStats.clients || 0}
-              icon={TrendingUp}
-              variant="success"
-            />
-          </div>
         </section>
 
         {/* Quick actions */}
@@ -169,14 +152,14 @@ export default function HomeScreen() {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Card>
             </Link>
-            <Link href="/dashboard/clients">
+            <Link href="/dashboard/attendance">
               <Card className="flex items-center gap-4 py-4 px-5 hover:shadow-elevated">
                 <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 shrink-0">
-                  <Users className="h-5 w-5 text-primary" />
+                  <CheckCircle className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1">
-                  <p className="text-base font-bold text-foreground">Клиенты</p>
-                  <p className="text-xs text-muted-foreground">Управление клиентами</p>
+                  <p className="text-base font-bold text-foreground">Посещаемость</p>
+                  <p className="text-xs text-muted-foreground">Отметить посещения</p>
                 </div>
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Card>

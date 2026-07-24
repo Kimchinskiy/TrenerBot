@@ -152,7 +152,9 @@ func (s *Services) CreateCoach(co domain.Coach) (int64, error) { return s.Store.
 
 func (s *Services) ListCoaches() ([]domain.Coach, error) { return s.Store.ListCoaches() }
 
-func (s *Services) CoachByUser(userID int64) (*domain.Coach, error) { return s.Store.CoachByUserID(userID) }
+func (s *Services) CoachByUser(userID int64) (*domain.Coach, error) {
+	return s.Store.CoachByUserID(userID)
+}
 
 // ---------- Lessons ----------
 
@@ -481,12 +483,12 @@ func (s *Services) GetClientWellbeingHistory(clientID int64) ([]map[string]any, 
 			return nil, err
 		}
 		out = append(out, map[string]any{
-			"id":        id,
-			"lesson_id": refID,
-			"note":      note,
+			"id":         id,
+			"lesson_id":  refID,
+			"note":       note,
 			"created_at": created,
-			"date":      date,
-			"time":      time,
+			"date":       date,
+			"time":       time,
 		})
 	}
 	return out, rows.Err()
@@ -496,14 +498,14 @@ func (s *Services) GetClientWellbeingHistory(clientID int64) ([]map[string]any, 
 func (s *Services) NewClientFAQ(query string) string {
 	query = strings.ToLower(query)
 	switch {
-	case strings.Contains(query, "цена") || strings.Contains(query, "стоимост") || strings.Contains(query, "абонемент"):
-		return "💰 Стоимость занятий:\n• Разовое — 1500₽\n• Абонемент на 8 — 10000₽ (1250₽/зан)\n• Абонемент на 12 — 13200₽ (1100₽/зан)\n\nЕсть скидка 10% на первый абонемент!"
-	case strings.Contains(query, "распис") || strings.Contains(query, "когда") || strings.Contains(query, "время"):
-		return "📅 Расписание:\n• Понедельник 09:00, 19:00\n• Среда 09:00, 19:00\n• Пятница 09:00, 18:00\n• Суббота 10:00\n\nТочное расписание на неделю — кнопка «Моё расписание»"
-	case strings.Contains(query, "медицин") || strings.Contains(query, "здоров") || strings.Contains(query, "ограничен"):
-		return "🏥 Медицинские ограничения:\nПри наличии хронических заболеваний или травм — обязательно справка от врача. Тренер скорректирует нагрузку под ваши особенности."
-	case strings.Contains(query, "что взять") || strings.Contains(query, "экипировк") || strings.Contains(query, "одежда"):
-		return "👟 Что взять:\n• Удобная спортивная одежда\n• Кроссовки с чистым подошвой\n• Вода\n• Полотенце (по желанию)\n\nДуш и раздевалки на месте."
+	case strings.Contains(query, "цена"):
+		return "Цены"
+	case strings.Contains(query, "расписание"):
+		return "Расписание"
+	case strings.Contains(query, "Медицина"):
+		return "Медицинские ограничения"
+	case strings.Contains(query, "Что взять"):
+		return "Вещи"
 	default:
 		return "👋 Добро пожаловать! Частые вопросы:\n• /price — цены и абонементы\n• /schedule — расписание\n• /medical — мед. ограничения\n• /gear — что взять\n\nИли просто напишите свой вопрос — отвечу!"
 	}
@@ -656,9 +658,9 @@ func (s *Services) SaveFile(f domain.File) (int64, error) { return s.Store.Inser
 // ---------- Reports ----------
 
 type Report struct {
-	ClientsTotal   int `json:"clients_total"`
-	CoachesTotal   int `json:"coaches_total"`
-	LessonsWeek    int `json:"lessons_week"`
+	ClientsTotal int `json:"clients_total"`
+	CoachesTotal int `json:"coaches_total"`
+	LessonsWeek  int `json:"lessons_week"`
 }
 
 func (s *Services) Report(from, to string) (*Report, error) {
@@ -932,4 +934,22 @@ func (s *Services) GetGroupClients(groupID int64) ([]domain.GroupMember, error) 
 
 func (s *Services) GetClientGroups(clientID int64) ([]domain.Group, error) {
 	return s.Store.GetClientGroups(clientID)
+}
+
+// ---------- Client Subscriptions ----------
+
+func (s *Services) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription, error) {
+	return s.Store.ClientSubscriptions(clientID)
+}
+
+func (s *Services) CreateClientSubscription(sub domain.ClientSubscription) (int64, error) {
+	return s.Store.CreateClientSubscription(sub)
+}
+
+func (s *Services) UpdateClientSubscription(sub domain.ClientSubscription) error {
+	return s.Store.UpdateClientSubscription(sub)
+}
+
+func (s *Services) DeleteClientSubscription(id int64) error {
+	return s.Store.DeleteClientSubscription(id)
 }

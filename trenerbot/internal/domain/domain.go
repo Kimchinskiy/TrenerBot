@@ -225,6 +225,18 @@ type CoachSubscription struct {
 	UpdatedAt *string            `json:"updated_at,omitempty"`
 }
 
+type ClientSubscription struct {
+	ID          int64   `json:"id"`
+	ClientID    int64   `json:"client_id"`
+	Type        string  `json:"type"`
+	Price       float64 `json:"price"`
+	BoughtAt    string  `json:"bought_at"`
+	EndsAt      string  `json:"ends_at"`
+	LessonsLeft int     `json:"lessons_left"`
+	Freeze      int     `json:"freeze"`
+	CreatedAt   string  `json:"created_at"`
+}
+
 type SocialLink struct {
 	ID       int64  `json:"id"`
 	CoachID  int64  `json:"coach_id"`

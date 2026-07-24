@@ -194,6 +194,18 @@ export interface Group {
   active: number
 }
 
+export interface ClientSubscription {
+  id: number
+  client_id: number
+  type: string
+  price: number
+  bought_at: string
+  ends_at: string
+  lessons_left: number
+  freeze: number
+  created_at: string
+}
+
 export interface GroupMember {
   id: number
   group_id: number
