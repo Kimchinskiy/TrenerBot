@@ -308,6 +308,21 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
 		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addClientToGroup))
 		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeClientFromGroup))
+
+		// Statistics
+		r.Get("/statistics", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, statisticsHandler))
+
+		// Bot v2: leads, students, trainings
+		r.Post("/leads", func(w http.ResponseWriter, r *http.Request) { createLeadHandler(svc, w, r) })
+		r.Get("/leads", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listLeadsHandler))
+		r.Post("/leads/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, reviewLeadHandler))
+		r.Get("/me/students", func(w http.ResponseWriter, r *http.Request) { myStudentsHandler(svc, w, r) })
+		r.Get("/students/{id}/trainings", func(w http.ResponseWriter, r *http.Request) { studentTrainingsHandler(svc, w, r) })
+		r.Get("/students/{id}/subscription", func(w http.ResponseWriter, r *http.Request) { studentSubscriptionHandler(svc, w, r) })
+		r.Post("/trainings/absence", func(w http.ResponseWriter, r *http.Request) { reportAbsenceHandler(svc, w, r) })
+		r.Get("/groups/{id}/students", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupStudentsHandler))
+		r.Get("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getNotifPrefsHandler(svc, w, r) })
+		r.Post("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveNotifPrefsHandler(svc, w, r) })
 	})
 
 	// Client subscriptions

@@ -156,10 +156,10 @@ func (c *Client) MessageCoaches(from, text string) error {
 
 // Admin panel methods
 type ClientListItem struct {
-	ID                 int64   `json:"id"`
-	FullName           string  `json:"full_name"`
-	Phone              *string `json:"phone,omitempty"`
-	BotAccess          bool    `json:"bot_access"`
+	ID                  int64   `json:"id"`
+	FullName            string  `json:"full_name"`
+	Phone               *string `json:"phone,omitempty"`
+	BotAccess           bool    `json:"bot_access"`
 	SubscriptionEndsAt *string `json:"subscription_ends_at,omitempty"`
 }
 
@@ -255,4 +255,140 @@ func (c *Client) UploadFile(tgID, ownerType string, ownerID int64, kind, path st
 		return 0, err
 	}
 	return res.ID, nil
+}
+
+// ---------- Bot v2 API methods ----------
+
+func (c *Client) CreateLead(tgID, fullName string, phone *string, targetName *string, targetAge *int, targetLevel, regType string) (int64, error) {
+	body := map[string]any{
+		"telegram_id":  tgID,
+		"full_name":    fullName,
+		"target_level": targetLevel,
+		"reg_type":     regType,
+	}
+	if phone != nil {
+		body["phone"] = *phone
+	}
+	if targetName != nil {
+		body["target_name"] = *targetName
+	}
+	if targetAge != nil {
+		body["target_age"] = *targetAge
+	}
+	var res struct {
+		ID int64 `json:"id"`
+	}
+	if err := c.do(http.MethodPost, "/api/leads", tgID, body, &res); err != nil {
+		return 0, err
+	}
+	return res.ID, nil
+}
+
+type LeadItem struct {
+	ID          int64   `json:"id"`
+	FullName    string  `json:"full_name"`
+	Phone       *string `json:"phone,omitempty"`
+	TargetName  *string `json:"target_name,omitempty"`
+	TargetAge   *int    `json:"target_age,omitempty"`
+	TargetLevel string  `json:"target_level"`
+	RegType     string  `json:"reg_type"`
+	Status      string  `json:"status"`
+	CreatedAt   string  `json:"created_at"`
+}
+
+func (c *Client) PendingLeads(tgID string) ([]LeadItem, error) {
+	var out []LeadItem
+	if err := c.do(http.MethodGet, "/api/leads", tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *Client) ApproveLead(tgID string, leadID int64) error {
+	body := map[string]any{"action": "approve"}
+	return c.do(http.MethodPost, fmt.Sprintf("/api/leads/%d", leadID), tgID, body, nil)
+}
+
+func (c *Client) RejectLead(tgID string, leadID int64) error {
+	body := map[string]any{"action": "reject"}
+	return c.do(http.MethodPost, fmt.Sprintf("/api/leads/%d", leadID), tgID, body, nil)
+}
+
+type StudentResult struct {
+	ID        int64   `json:"id"`
+	FullName  string  `json:"full_name"`
+	Age       *int    `json:"age,omitempty"`
+	Level     string  `json:"level"`
+	Phone     *string `json:"phone,omitempty"`
+	Status    string  `json:"status"`
+}
+
+func (c *Client) MyStudents(tgID string) ([]StudentResult, error) {
+	var out []StudentResult
+	if err := c.do(http.MethodGet, "/api/me/students", tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+type TrainingResult struct {
+	ID       int64   `json:"id"`
+	Date     string  `json:"date"`
+	Time     string  `json:"time"`
+	Duration int     `json:"duration"`
+	Status   string  `json:"status"`
+	Location *string `json:"location,omitempty"`
+	GroupID  *int64  `json:"group_id,omitempty"`
+}
+
+func (c *Client) StudentSchedule(tgID string, studentID int64, from, to string) ([]TrainingResult, error) {
+	var out []TrainingResult
+	path := fmt.Sprintf("/api/students/%d/trainings?from=%s&to=%s", studentID, from, to)
+	if err := c.do(http.MethodGet, path, tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *Client) ReportAbsence(tgID string, trainingID, studentID int64, reason string) error {
+	body := map[string]any{"training_id": trainingID, "student_id": studentID, "reason": reason}
+	return c.do(http.MethodPost, "/api/trainings/absence", tgID, body, nil)
+}
+
+type SubscriptionResult struct {
+	Type        string  `json:"type"`
+	Price       float64 `json:"price"`
+	LessonsLeft int     `json:"lessons_left"`
+	EndsAt      string  `json:"ends_at"`
+}
+
+func (c *Client) StudentSubscription(tgID string, studentID int64) (*SubscriptionResult, error) {
+	var out SubscriptionResult
+	path := fmt.Sprintf("/api/students/%d/subscription", studentID)
+	if err := c.do(http.MethodGet, path, tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+func (c *Client) SendMessage(tgID string, studentID int64, text string) error {
+	body := map[string]any{"student_id": studentID, "text": text}
+	return c.do(http.MethodPost, "/api/messages/coach", tgID, body, nil)
+}
+
+func (c *Client) Groups(tgID string) ([]domain.Group, error) {
+	var out []domain.Group
+	if err := c.do(http.MethodGet, "/api/groups", tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *Client) GroupStudents(tgID string, groupID int64) ([]StudentResult, error) {
+	var out []StudentResult
+	path := fmt.Sprintf("/api/groups/%d/students", groupID)
+	if err := c.do(http.MethodGet, path, tgID, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

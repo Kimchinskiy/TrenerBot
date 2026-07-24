@@ -267,3 +267,160 @@ type ChildLessonStatus struct {
 	MinutesUntil   *int   `json:"minutes_until,omitempty"`
 	HasLessonToday bool   `json:"has_lesson_today"`
 }
+
+type StatisticsResponse struct {
+	Period         string            `json:"period"`
+	DateFrom       string            `json:"date_from"`
+	DateTo         string            `json:"date_to"`
+	Trainings      MetricValue       `json:"trainings"`
+	Clients        MetricValue       `json:"clients"`
+	Income         IncomeMetric      `json:"income"`
+	Attendance     MetricValue       `json:"attendance"`
+	Debtors        DebtorsSummary    `json:"debtors"`
+	IncomeChart    []ChartPoint      `json:"income_chart"`
+	QuickOverview  QuickOverview     `json:"quick_overview"`
+}
+
+type MetricValue struct {
+	Value    float64 `json:"value"`
+	Change   float64 `json:"change"`
+	Label    string  `json:"label"`
+}
+
+type IncomeMetric struct {
+	Value    float64 `json:"value"`
+	Change   float64 `json:"change"`
+	Label    string  `json:"label"`
+}
+
+type DebtorsSummary struct {
+	Count     int            `json:"count"`
+	TotalDebt float64        `json:"total_debt"`
+	Items     []DebtorItem   `json:"items"`
+}
+
+type DebtorItem struct {
+	ClientID  int64   `json:"client_id"`
+	FullName  string  `json:"full_name"`
+	Phone     *string `json:"phone,omitempty"`
+	Debt      float64 `json:"debt"`
+	EndsAt    *string `json:"ends_at,omitempty"`
+}
+
+type ChartPoint struct {
+	Label string  `json:"label"`
+	Value float64 `json:"value"`
+}
+
+type QuickOverview struct {
+	NewClients      int     `json:"new_clients"`
+	AverageCheck    float64 `json:"average_check"`
+	CanceledCount   int     `json:"canceled_count"`
+	AvgAttendance   float64 `json:"avg_attendance"`
+	AvgGroupSize    float64 `json:"avg_group_size"`
+	BusiestDay      string  `json:"busiest_day"`
+	PopularTime     string  `json:"popular_time"`
+}
+
+// ---------- Bot v2 domain ----------
+
+type Student struct {
+	ID             int64   `json:"id"`
+	FullName       string  `json:"full_name"`
+	BirthDate      *string `json:"birth_date,omitempty"`
+	Age            *int    `json:"age,omitempty"`
+	Level          string  `json:"level"`
+	Phone          *string `json:"phone,omitempty"`
+	AdditionalInfo *string `json:"additional_info,omitempty"`
+	Status         string  `json:"status"`
+	ClientID       *int64  `json:"client_id,omitempty"`
+	CreatedAt      string  `json:"created_at"`
+	UpdatedAt      *string `json:"updated_at,omitempty"`
+}
+
+type RelationType string
+
+const (
+	RelSelf     RelationType = "self"
+	RelParent   RelationType = "parent"
+	RelGuardian RelationType = "guardian"
+)
+
+type Relationship struct {
+	ID        int64   `json:"id"`
+	UserID    int64   `json:"user_id"`
+	StudentID int64   `json:"student_id"`
+	Relation  RelationType `json:"relation"`
+	CreatedAt string  `json:"created_at"`
+}
+
+type LeadStatus string
+
+const (
+	LeadPending  LeadStatus = "pending"
+	LeadApproved LeadStatus = "approved"
+	LeadRejected LeadStatus = "rejected"
+)
+
+type Lead struct {
+	ID              int64     `json:"id"`
+	TelegramID      string    `json:"telegram_id"`
+	FullName        string    `json:"full_name"`
+	Phone           *string   `json:"phone,omitempty"`
+	TargetName      *string   `json:"target_name,omitempty"`
+	TargetAge       *int      `json:"target_age,omitempty"`
+	TargetLevel     string    `json:"target_level"`
+	RegType         string    `json:"reg_type"`
+	Status          LeadStatus `json:"status"`
+	CreatedAt       string    `json:"created_at"`
+	ReviewedAt      *string   `json:"reviewed_at,omitempty"`
+	ReviewedBy      *int64    `json:"reviewed_by,omitempty"`
+	CreatedUserID   *int64    `json:"created_user_id,omitempty"`
+	CreatedStudentID *int64    `json:"created_student_id,omitempty"`
+}
+
+type TrainingTemplate struct {
+	ID       int64  `json:"id"`
+	GroupID  int64  `json:"group_id"`
+	Weekday  int    `json:"weekday"`
+	Time     string `json:"time"`
+	Duration int    `json:"duration"`
+}
+
+type Training struct {
+	ID       int64  `json:"id"`
+	GroupID  *int64 `json:"group_id,omitempty"`
+	CoachID  *int64 `json:"coach_id,omitempty"`
+	Date    string `json:"date"`
+	Time    string `json:"time"`
+	Duration int    `json:"duration"`
+	Status   string `json:"status"`
+	Location *string `json:"location,omitempty"`
+	Comment  *string `json:"comment,omitempty"`
+}
+
+type TrainingAbsence struct {
+	ID         int64  `json:"id"`
+	TrainingID int64  `json:"training_id"`
+	StudentID  int64  `json:"student_id"`
+	Reason     string `json:"reason"`
+	CreatedAt  string `json:"created_at"`
+}
+
+type NotificationPref struct {
+	UserID        int64  `json:"user_id"`
+	StudentID     *int64 `json:"student_id,omitempty"`
+	ReminderDay    int    `json:"reminder_day"`
+	ReminderHours  int    `json:"reminder_hours"`
+	LessonsLow     int    `json:"lessons_low"`
+	SubExpiring    int    `json:"sub_expiring"`
+	News           int    `json:"news"`
+}
+
+type ClientMessage struct {
+	ID        int64  `json:"id"`
+	UserID    *int64 `json:"user_id,omitempty"`
+	StudentID *int64 `json:"student_id,omitempty"`
+	Text      string `json:"text"`
+	CreatedAt string `json:"created_at"`
+}

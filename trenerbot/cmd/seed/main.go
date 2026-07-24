@@ -1,200 +1,196 @@
 package main
 
 import (
-	"log/slog"
-	"os"
+	"fmt"
+	"log"
+	"math/rand"
 	"time"
 
-	"trenerbot/internal/config"
 	"trenerbot/internal/db"
-	"trenerbot/internal/domain"
-	"trenerbot/internal/store"
 )
 
-// seed creates the initial admin and coach accounts from env (TELEGRAM_ID values).
 func main() {
-	_, _ = config.Load()
-	_ = godotenvLoad()
-
-	database, err := db.Open(os.Getenv("DB_PATH"))
+	database, err := db.Open("data/crm.db")
 	if err != nil {
-		slog.Error("db", "err", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 	defer database.Close()
-	s := store.New(database)
 
-	// Admin
-	if id := os.Getenv("ADMIN_TELEGRAM_ID"); id != "" {
-		if u, _ := s.UserByTelegram(id); u == nil {
-			if _, err := s.CreateUser(&id, domain.RoleAdmin); err != nil {
-				slog.Error("create admin", "err", err)
-			} else {
-				slog.Info("admin created", "id", id)
-			}
-		} else {
-			slog.Info("admin already exists", "id", id)
-		}
-	}
+	// Check existing data
+	var lessonCount int
+	database.QueryRow("SELECT COUNT(*) FROM lesson_entries").Scan(&lessonCount)
 
-	// Coach
-	var coachUserID int64
-	if id := os.Getenv("COACH_TELEGRAM_ID"); id != "" {
-		if u, _ := s.UserByTelegram(id); u == nil {
-			uid, err := s.CreateUser(&id, domain.RoleCoach)
-			if err != nil {
-				slog.Error("create coach user", "err", err)
-				os.Exit(1)
-			}
-			co := domain.Coach{UserID: &uid, FullName: os.Getenv("COACH_NAME")}
-			if co.FullName == "" {
-				co.FullName = "Тренер"
-			}
-			if _, err := s.CreateCoach(co); err != nil {
-				slog.Error("create coach", "err", err)
-				os.Exit(1)
-			}
-			coachUserID = uid
-			fmt.Println("coach created:", id)
-		} else {
-			fmt.Println("coach already exists:", id)
-			coachUserID = u.ID
-		}
-	}
-
-	// Create test clients and lessons if requested
-	if os.Getenv("SEED_TEST_DATA") == "1" {
-		seedTestData(s, coachUserID)
-	}
-}
-
-func seedTestData(s *store.Store, coachUserID int64) {
-	slog.Info("Seeding test data")
-
-	// Get coach ID
-	coach, err := s.CoachByUserID(coachUserID)
-	if err != nil || coach == nil {
-		slog.Error("get coach", "err", err)
-		return
-	}
-
-	// Create test clients
-	clients := []domain.Client{
-		{UserID: nil, FullName: "Анна Петрова", Phone: strPtr("+7 900 111-22-33"), Age: intPtr(28), Status: "active", Source: strPtr("telegram_bot")},
-		{UserID: nil, FullName: "Иван Сидоров", Phone: strPtr("+7 900 222-33-44"), Age: intPtr(35), Status: "active", Source: strPtr("telegram_bot")},
-		{UserID: nil, FullName: "Мария Козлова", Phone: strPtr("+7 900 333-44-55"), Age: intPtr(24), Status: "active", Source: strPtr("telegram_bot")},
-		{UserID: nil, FullName: "Дмитрий Волков", Phone: strPtr("+7 900 444-55-66"), Age: intPtr(30), Status: "active", Source: strPtr("telegram_bot")},
-		{UserID: nil, FullName: "Елена Смирнова", Phone: strPtr("+7 900 555-66-77"), Age: intPtr(27), Status: "active", Source: strPtr("telegram_bot")},
-	}
-
-	var clientIDs []int64
-	for _, c := range clients {
-		id, err := s.CreateClient(c)
-		if err != nil {
-			slog.Error("create client", "err", err)
-			continue
-		}
-		clientIDs = append(clientIDs, id)
-		fmt.Printf("Created client: %s (ID: %d)\n", c.FullName, id)
-	}
-
-	// Create lesson entries for today to end of current week (per athlete)
-	now := time.Now()
-	weekday := now.Weekday()
-	if weekday == time.Sunday {
-		weekday = 7
+	if lessonCount > 10 {
+		fmt.Printf("Data already exists (%d lessons), re-seeding...\n", lessonCount)
+		// Clean and re-seed
+		database.Exec("DELETE FROM daily_attendance")
+		database.Exec("DELETE FROM lesson_entries")
+		database.Exec("DELETE FROM subscriptions")
+		database.Exec("DELETE FROM group_members")
+		database.Exec("DELETE FROM groups WHERE id > 0")
+		database.Exec("DELETE FROM clients WHERE id >= 2")
 	} else {
-		weekday = time.Monday - weekday + 7
+		fmt.Println("Seeding test data...")
 	}
-	endOfWeek := now.AddDate(0, 0, int(7-weekday))
-	for d := 0; d <= int(endOfWeek.Sub(now).Hours()/24); d++ {
-		date := now.AddDate(0, 0, d).Format("2006-01-02")
 
-		for j, clientID := range clientIDs {
-			timeStr := "09:00"
-			if j%2 == 1 {
-				timeStr = "10:00"
-			}
-			entry := domain.LessonEntry{
-				Date:     date,
-				Time:     timeStr,
-				ClientID: clientID,
-				CoachID:  &coach.ID,
-				Duration: 60,
-				Status:   domain.LessonPlanned,
-			}
-			id, _ := s.InsertLessonEntry(entry)
-			fmt.Printf("Created lesson entry: %s %s client=%d entry#%d\n", date, timeStr, clientID, id)
+	// Also ensure clean state for coaches/users
+	database.Exec("DELETE FROM coaches")
+	database.Exec("DELETE FROM users")
+
+	// 1. User (coach)
+	database.Exec(`INSERT OR IGNORE INTO users(id, role, first_name, created_at) VALUES (1, 'coach', 'Анна', datetime('now'))`)
+
+	// 2. Coach
+	database.Exec(`INSERT OR IGNORE INTO coaches(id, user_id, full_name) VALUES (1, 1, 'Анна Тренер')`)
+	database.Exec(`UPDATE users SET updated_at = datetime('now') WHERE id = 1`)
+
+	// 3. Clients
+	clients := []struct {
+		id       int
+		name     string
+		status   string
+		regDate  string
+		phone    string
+		hasSub   bool
+		subType  string
+		subPrice float64
+		subEnds  string
+		lessons  int
+	}{
+		{2, "Иван Петров", "active", "2026-06-01", "+7 (999) 111-22-33", true, "count", 5000, "2026-08-15", 12},
+		{3, "Мария Иванова", "active", "2026-06-05", "+7 (999) 222-33-44", true, "period", 8000, "2026-09-01", 0},
+		{4, "Алексей Смирнов", "active", "2026-06-10", "+7 (999) 333-44-55", true, "count", 4500, "2026-07-20", 5},
+		{5, "Елена Козлова", "active", "2026-06-12", "+7 (999) 444-55-66", false, "", 0, "", 0},
+		{6, "Дмитрий Новиков", "active", "2026-06-15", "+7 (999) 555-66-77", true, "count", 6000, "2026-08-30", 8},
+		{7, "Ольга Фёдорова", "active", "2026-06-20", "+7 (999) 666-77-88", true, "period", 10000, "2026-10-01", 0},
+		{8, "Сергей Морозов", "active", "2026-07-01", "+7 (999) 777-88-99", false, "", 0, "", 0},
+		{9, "Наталья Кузнецова", "active", "2026-07-05", "+7 (999) 888-99-00", true, "count", 5500, "2026-07-25", 3},
+		{10, "Павел Захаров", "active", "2026-07-10", "+7 (999) 000-11-22", true, "count", 7000, "2026-09-15", 10},
+		{11, "Анна Белова", "active", "2026-07-12", "+7 (999) 111-22-44", false, "", 0, "", 0},
+		{12, "Михаил Соколов", "paused", "2026-06-18", "+7 (999) 222-55-77", false, "", 0, "", 0},
+		{13, "Татьяна Орлова", "active", "2026-07-15", "+7 (999) 333-66-88", true, "count", 5000, "2026-07-10", 0},
+	}
+
+	for _, c := range clients {
+		_, err := database.Exec(`INSERT OR IGNORE INTO clients(id, full_name, status, registered_at, phone) VALUES (?, ?, ?, ?, ?)`,
+			c.id, c.name, c.status, c.regDate, c.phone)
+		if err != nil {
+			log.Printf("client %d: %v", c.id, err)
 		}
 	}
 
-	// Create historical (completed) entries for past days
-	pastDate := now.AddDate(0, 0, -3).Format("2006-01-02")
-	pastTimes := []string{"09:00", "10:00", "11:00"}
-	for i, clientID := range clientIDs[:3] {
-		entry := domain.LessonEntry{
-			Date:     pastDate,
-			Time:     pastTimes[i],
-			ClientID: clientID,
-			CoachID:  &coach.ID,
-			Duration: 60,
-			Status:   domain.LessonDone,
-		}
-		id, _ := s.InsertLessonEntry(entry)
-		fmt.Printf("Created past lesson entry: %s %s client=%d entry#%d\n", pastDate, pastTimes[i], clientID, id)
-	}
-
-	// Create waiting list entries
-	for i, clientID := range clientIDs[:2] {
-		s.DB.Exec(`INSERT INTO waiting_list(client_id, group_id, position, created_at) VALUES (?, NULL, ?, datetime('now'))`, clientID, i+1)
-	}
-	fmt.Println("Created waiting list entries")
-
-	fmt.Println("Test data seeding complete!")
-}
-
-func strPtr(s string) *string { return &s }
-func intPtr(i int) *int { return &i }
-
-func godotenvLoad() error {
-	if _, err := os.Stat(".env"); err != nil {
-		return nil
-	}
-	data, err := os.ReadFile(".env")
-	if err != nil {
-		return err
-	}
-	for _, line := range splitLines(string(data)) {
-		if line == "" || line[0] == '#' {
+	// 4. Subscriptions
+	subID := 1
+	for _, c := range clients {
+		if !c.hasSub {
 			continue
 		}
-		var k, v string
-		for i := 0; i < len(line); i++ {
-			if line[i] == '=' {
-				k, v = line[:i], line[i+1:]
-				break
+		boughtAt := c.regDate
+		database.Exec(`INSERT OR IGNORE INTO subscriptions(id, client_id, type, price, bought_at, ends_at, lessons_left) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+			subID, c.id, c.subType, c.subPrice, boughtAt, c.subEnds, c.lessons)
+		subID++
+	}
+
+	// 5. Groups
+	groups := []struct{ id int; name string }{
+		{1, "Утренняя группа"},
+		{2, "Вечерняя группа"},
+		{3, "Выходного дня"},
+	}
+	for _, g := range groups {
+		database.Exec(`INSERT OR IGNORE INTO groups(id, name, coach_id, active) VALUES (?, ?, 1, 1)`, g.id, g.name)
+	}
+
+	// 6. Group members
+	members := []struct{ gID, cID int }{
+		{1, 2}, {1, 3}, {1, 4}, {1, 6}, {1, 10},
+		{2, 5}, {2, 7}, {2, 8}, {2, 9}, {2, 11},
+		{3, 2}, {3, 7}, {3, 13},
+	}
+	for _, m := range members {
+		database.Exec(`INSERT OR IGNORE INTO group_members(group_id, client_id, role) VALUES (?, ?, 'member')`, m.gID, m.cID)
+	}
+
+	// 7. Lesson entries (last 60 days)
+	clientIDs := []int{2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 13}
+	now := time.Now()
+	rng := rand.New(rand.NewSource(42))
+	lessonID := 1
+
+	for dayOffset := 60; dayOffset >= 0; dayOffset-- {
+		date := now.AddDate(0, 0, -dayOffset)
+		dateStr := date.Format("2006-01-02")
+		weekday := date.Weekday()
+		if weekday == time.Sunday {
+			continue
+		}
+		sessions := []string{"09:00", "10:00", "18:00", "19:00"}
+		for _, session := range sessions {
+			if rng.Float64() > 0.6 {
+				continue
+			}
+			n := 2 + rng.Intn(4)
+			rng.Shuffle(len(clientIDs), func(i, j int) { clientIDs[i], clientIDs[j] = clientIDs[i], clientIDs[j] })
+			for i := 0; i < n && i < len(clientIDs); i++ {
+				status := "done"
+				if rng.Float64() < 0.1 {
+					status = "canceled"
+				}
+				_, err := database.Exec(`INSERT OR IGNORE INTO lesson_entries(id, date, time, client_id, coach_id, duration, status) VALUES (?, ?, ?, ?, 1, 60, ?)`,
+					lessonID, dateStr, session, clientIDs[i], status)
+				if err != nil {
+					log.Printf("lesson %d: %v", lessonID, err)
+				}
+				lessonID++
 			}
 		}
-		if k != "" {
-			_ = os.Setenv(k, v)
-		}
 	}
-	return nil
-}
 
-func splitLines(s string) []string {
-	var out []string
-	cur := ""
-	for _, r := range s {
-		if r == '\n' {
-			out = append(out, cur)
-			cur = ""
-		} else {
-			cur += string(r)
+	// 8. Daily attendance (last 30 days)
+	rows, err := database.Query(`SELECT id, date, client_id FROM lesson_entries WHERE status = 'done' AND date >= date('now', '-30 days')`)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var attrs []struct{ id, cid int; date string }
+	for rows.Next() {
+		var a struct{ id, cid int; date string }
+		rows.Scan(&a.id, &a.date, &a.cid)
+		attrs = append(attrs, a)
+	}
+	rows.Close()
+
+	for _, a := range attrs {
+		present := 1
+		if rng.Float64() < 0.08 {
+			present = 0
 		}
+		database.Exec(`INSERT OR IGNORE INTO daily_attendance(date, client_id, present, marked_by) VALUES (?, ?, ?, 1)`,
+			a.date, a.cid, present)
 	}
-	if cur != "" {
-		out = append(out, cur)
+
+	// 9. Extra subscriptions for richer income chart
+	extraSubs := []struct {
+		clientID int
+		price    float64
+		daysAgo  int
+	}{
+		{2, 5000, 45}, {3, 8000, 40}, {4, 4500, 35}, {6, 6000, 30},
+		{7, 10000, 25}, {9, 5500, 20}, {10, 7000, 15}, {13, 5000, 10},
+		{2, 5000, 50}, {5, 4000, 48}, {8, 3500, 42}, {11, 6000, 38},
+		{3, 8000, 28}, {4, 4500, 22}, {6, 6000, 12}, {7, 10000, 5},
+		{10, 7000, 55}, {13, 5000, 52},
 	}
-	return out
+	for _, s := range extraSubs {
+		date := now.AddDate(0, 0, -s.daysAgo).Format("2006-01-02")
+		endsAt := now.AddDate(0, 0, 30-s.daysAgo).Format("2006-01-02")
+		database.Exec(`INSERT OR IGNORE INTO subscriptions(id, client_id, type, price, bought_at, ends_at, lessons_left) VALUES (?, ?, 'count', ?, ?, ?, ?)`,
+			subID, s.clientID, s.price, date, endsAt, 8+rng.Intn(8))
+		subID++
+	}
+
+	fmt.Println("=== Seed data inserted ===")
+	fmt.Printf("  Clients: %d\n", len(clients))
+	fmt.Printf("  Lesson entries: %d\n", lessonID-1)
+	fmt.Printf("  Attendance records: %d\n", len(attrs))
+	fmt.Printf("  Groups: %d\n", len(groups))
 }

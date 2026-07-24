@@ -62,7 +62,7 @@ func clientsMe(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if c == nil {
-		writeError(w, http.StatusNotFound, "client profile not found")
+		writeJSON(w, http.StatusOK, map[string]any{"role": u.Role})
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"role": u.Role, "client": c})

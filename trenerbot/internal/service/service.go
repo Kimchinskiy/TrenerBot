@@ -953,3 +953,251 @@ func (s *Services) UpdateClientSubscription(sub domain.ClientSubscription) error
 func (s *Services) DeleteClientSubscription(id int64) error {
 	return s.Store.DeleteClientSubscription(id)
 }
+
+// ---------- Statistics ----------
+
+type StatisticsRequest struct {
+	Period   string
+	CoachID  int64
+	IsAdmin  bool
+}
+
+func (s *Services) GetStatistics(req StatisticsRequest) (*domain.StatisticsResponse, error) {
+	now := time.Now()
+	var from, to string
+	var prevFrom, prevTo string
+
+	switch req.Period {
+	case "year":
+		from = time.Date(now.Year(), 1, 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+		to = now.Format("2006-01-02")
+		prevFrom = time.Date(now.Year()-1, 1, 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+		prevTo = time.Date(now.Year()-1, 12, 31, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	case "month":
+		from = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+		to = now.Format("2006-01-02")
+		prevFrom = time.Date(now.Year(), now.Month()-1, 1, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+		prevTo = time.Date(now.Year(), now.Month(), 0, 0, 0, 0, 0, now.Location()).Format("2006-01-02")
+	default: // week
+		weekday := now.Weekday()
+		if weekday == time.Sunday {
+			weekday = 7
+		}
+		monday := now.AddDate(0, 0, -int(weekday-time.Monday))
+		from = monday.Format("2006-01-02")
+		to = now.Format("2006-01-02")
+		prevFrom = monday.AddDate(0, 0, -7).Format("2006-01-02")
+		prevTo = monday.AddDate(0, 0, -1).Format("2006-01-02")
+	}
+
+	resp := &domain.StatisticsResponse{
+		Period:   req.Period,
+		DateFrom: from,
+		DateTo:   to,
+	}
+
+	var err error
+
+	// Trainings
+	curr, err := s.Store.TrainingCount(from, to, req.CoachID)
+	if err != nil {
+		return nil, err
+	}
+	prev, err := s.Store.TrainingCount(prevFrom, prevTo, req.CoachID)
+	if err != nil {
+		return nil, err
+	}
+	resp.Trainings = domain.MetricValue{Value: float64(curr), Change: float64(curr - prev), Label: "Тренировки"}
+
+	// Active clients
+	active, err := s.Store.ActiveClientsCount()
+	if err != nil {
+		return nil, err
+	}
+	newClients, err := s.Store.NewClientsCount(from, to)
+	if err != nil {
+		return nil, err
+	}
+	prevNewClients, err := s.Store.NewClientsCount(prevFrom, prevTo)
+	if err != nil {
+		return nil, err
+	}
+	resp.Clients = domain.MetricValue{Value: float64(active), Change: float64(newClients - prevNewClients), Label: "Клиенты"}
+
+	// Income
+	income, err := s.Store.SubscriptionIncome(from, to)
+	if err != nil {
+		return nil, err
+	}
+	prevIncome, err := s.Store.SubscriptionIncome(prevFrom, prevTo)
+	if err != nil {
+		return nil, err
+	}
+	incomeChange := 0.0
+	if prevIncome > 0 {
+		incomeChange = (income - prevIncome) / prevIncome * 100
+	}
+	resp.Income = domain.IncomeMetric{Value: income, Change: incomeChange, Label: "Доход"}
+
+	// Attendance
+	attRate, err := s.Store.AttendanceRate(from, to)
+	if err != nil {
+		return nil, err
+	}
+	prevAttRate, err := s.Store.AttendanceRate(prevFrom, prevTo)
+	if err != nil {
+		return nil, err
+	}
+	attChange := attRate - prevAttRate
+	resp.Attendance = domain.MetricValue{Value: attRate, Change: attChange, Label: "Посещаемость"}
+
+	// Debtors
+	debtorRows, err := s.Store.DebtorClients()
+	if err != nil {
+		return nil, err
+	}
+	var totalDebt float64
+	var items []domain.DebtorItem
+	for _, d := range debtorRows {
+		totalDebt += d.Debt
+		phone := nullStringPtr(d.Phone)
+		endsAt := nullStringPtr(d.EndsAt)
+		items = append(items, domain.DebtorItem{
+			ClientID: d.ClientID,
+			FullName: d.FullName,
+			Phone:    phone,
+			Debt:     d.Debt,
+			EndsAt:   endsAt,
+		})
+	}
+	resp.Debtors = domain.DebtorsSummary{
+		Count:     len(items),
+		TotalDebt: totalDebt,
+		Items:     items,
+	}
+
+	// Income chart
+	chartPoints, err := s.Store.IncomeChartData(from, to)
+	if err != nil {
+		return nil, err
+	}
+	resp.IncomeChart = aggChartPoints(chartPoints, req.Period)
+
+	// Quick overview
+	overview := domain.QuickOverview{}
+	overview.NewClients = newClients
+
+	overview.AverageCheck = 0.0
+	if income > 0 && curr > 0 {
+		overview.AverageCheck = income / float64(curr)
+	}
+
+	canceled, err := s.Store.CanceledCount(from, to, req.CoachID)
+	if err != nil {
+		return nil, err
+	}
+	overview.CanceledCount = canceled
+
+	overview.AvgAttendance = attRate
+
+	avgGroupSize, err := s.Store.AvgGroupSize()
+	if err != nil {
+		return nil, err
+	}
+	overview.AvgGroupSize = avgGroupSize
+
+	busiestDay, err := s.Store.BusiestDay(from, to, req.CoachID)
+	if err != nil {
+		return nil, err
+	}
+	overview.BusiestDay = busiestDay
+
+	popularTime, err := s.Store.PopularTime(from, to, req.CoachID)
+	if err != nil {
+		return nil, err
+	}
+	overview.PopularTime = popularTime
+
+	resp.QuickOverview = overview
+
+	return resp, nil
+}
+
+func aggChartPoints(points []domain.ChartPoint, period string) []domain.ChartPoint {
+	if len(points) == 0 {
+		return nil
+	}
+	switch period {
+	case "year":
+		grouped := make(map[string]float64)
+		for _, p := range points {
+			if len(p.Label) >= 7 {
+				monthKey := p.Label[:7]
+				grouped[monthKey] += p.Value
+			} else {
+				grouped[p.Label] += p.Value
+			}
+		}
+		var result []domain.ChartPoint
+		for _, p := range points {
+			key := p.Label
+			if len(key) >= 7 {
+				key = key[:7]
+			}
+			if _, seen := grouped[key]; seen {
+				result = append(result, domain.ChartPoint{Label: key, Value: grouped[key]})
+				delete(grouped, key)
+			}
+		}
+		return result
+	case "month":
+		grouped := make(map[string]float64)
+		for _, p := range points {
+			t, err := time.Parse("2006-01-02", p.Label)
+			if err != nil {
+				grouped[p.Label] += p.Value
+				continue
+			}
+			_, isoWeek := t.ISOWeek()
+			weekKey := fmt.Sprintf("Нед %d", isoWeek)
+			grouped[weekKey] += p.Value
+		}
+		var result []domain.ChartPoint
+		for _, p := range points {
+			t, err := time.Parse("2006-01-02", p.Label)
+			if err != nil {
+				continue
+			}
+			_, isoWeek := t.ISOWeek()
+			weekKey := fmt.Sprintf("Нед %d", isoWeek)
+			if _, seen := grouped[weekKey]; seen {
+				result = append(result, domain.ChartPoint{Label: weekKey, Value: grouped[weekKey]})
+				delete(grouped, weekKey)
+			}
+		}
+		return result
+	default: // week - daily
+		var result []domain.ChartPoint
+		for _, p := range points {
+			t, err := time.Parse("2006-01-02", p.Label)
+			if err != nil {
+				result = append(result, p)
+				continue
+			}
+			weekdays := map[string]string{
+				"Monday": "Пн", "Tuesday": "Вт", "Wednesday": "Ср",
+				"Thursday": "Чт", "Friday": "Пт", "Saturday": "Сб", "Sunday": "Вс",
+			}
+			short := weekdays[t.Weekday().String()]
+			result = append(result, domain.ChartPoint{Label: short, Value: p.Value})
+		}
+		return result
+	}
+}
+
+func nullStringPtr(ns sql.NullString) *string {
+	if ns.Valid {
+		return &ns.String
+	}
+	return nil
+}
