@@ -21,6 +21,7 @@ import type {
   Group,
   GroupMember,
   ClientSubscription,
+  StatisticsResponse,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -266,6 +267,7 @@ export const endpoints = {
     request<{ status: string }>(`/groups/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteGroup: (id: number) => request<{ status: string }>(`/groups/${id}`, { method: 'DELETE' }),
   groupClients: (id: number) => request<GroupMember[]>(`/groups/${id}/clients`),
+  groupAvailableClients: (id: number) => request<Client[]>(`/groups/${id}/available-clients`),
   addClientToGroup: (id: number, clientId: number, role?: string) =>
     request<{ status: string }>(`/groups/${id}/clients`, { method: 'POST', body: JSON.stringify({ client_id: clientId, role }) }),
   removeClientFromGroup: (id: number, clientId: number) =>
@@ -277,6 +279,7 @@ export const endpoints = {
     request<{ status: string }>(`/clients/${data.client_id}/subscriptions`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteClientSubscription: (clientId: number, id: number) =>
     request<{ status: string }>(`/clients/${clientId}/subscriptions/${id}`, { method: 'DELETE' }),
+  statistics: (period: string) => request<StatisticsResponse>(`/statistics?period=${period}`),
   faq: (q: string) => request<{ answer: string }>(`/faq?q=${encodeURIComponent(q)}`),
   dateAttendance: (date: string) => request<DateAttendanceResponse>(`/attendance/date/${date}`),
   saveDateAttendance: (date: string, entries: SaveAttendanceEntry[]) =>

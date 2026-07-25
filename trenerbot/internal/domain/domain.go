@@ -82,14 +82,15 @@ type Coach struct {
 }
 
 type Group struct {
-	ID         int64   `json:"id"`
-	Name       *string `json:"name,omitempty"`
-	CoachID    *int64  `json:"coach_id,omitempty"`
-	MaxMembers *int    `json:"max_members,omitempty"`
-	Schedule   *string `json:"schedule,omitempty"`
-	Price      *float64 `json:"price,omitempty"`
-	Location   *string `json:"location,omitempty"`
-	Active     int     `json:"active"`
+	ID          int64    `json:"id"`
+	Name        *string  `json:"name,omitempty"`
+	CoachID     *int64   `json:"coach_id,omitempty"`
+	MaxMembers  *int     `json:"max_members,omitempty"`
+	Schedule    *string  `json:"schedule,omitempty"`
+	Price       *float64 `json:"price,omitempty"`
+	Location    *string  `json:"location,omitempty"`
+	Active      int      `json:"active"`
+	MemberCount int      `json:"member_count"`
 }
 
 type GroupMember struct {

@@ -1284,7 +1284,7 @@ func (s *Store) ListParentUserIDsByChildID(childID int64) ([]int64, error) {
 // ---------- Groups ----------
 
 func (s *Store) ListGroups() ([]domain.Group, error) {
-	rows, err := s.DB.Query(`SELECT id, name, coach_id, max_members, schedule, price, location, active FROM groups WHERE active = 1 ORDER BY name`)
+	rows, err := s.DB.Query(`SELECT g.id, g.name, g.coach_id, g.max_members, g.schedule, g.price, g.location, g.active, COALESCE((SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id), 0) FROM groups g WHERE g.active = 1 ORDER BY g.name`)
 	if err != nil {
 		return nil, err
 	}
@@ -1296,7 +1296,7 @@ func (s *Store) ListGroups() ([]domain.Group, error) {
 		var coachID sql.NullInt64
 		var maxMembers sql.NullInt64
 		var price sql.NullFloat64
-		if err := rows.Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active); err != nil {
+		if err := rows.Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active, &g.MemberCount); err != nil {
 			return nil, err
 		}
 		g.Name = nullStr(name)
@@ -1319,8 +1319,8 @@ func (s *Store) GetGroup(id int64) (*domain.Group, error) {
 	var coachID sql.NullInt64
 	var maxMembers sql.NullInt64
 	var price sql.NullFloat64
-	err := s.DB.QueryRow(`SELECT id, name, coach_id, max_members, schedule, price, location, active FROM groups WHERE id = ?`, id).
-		Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active)
+	err := s.DB.QueryRow(`SELECT g.id, g.name, g.coach_id, g.max_members, g.schedule, g.price, g.location, g.active, COALESCE((SELECT COUNT(*) FROM group_members gm WHERE gm.group_id = g.id), 0) FROM groups g WHERE g.id = ?`, id).
+		Scan(&g.ID, &name, &coachID, &maxMembers, &schedule, &price, &location, &g.Active, &g.MemberCount)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -1412,6 +1412,42 @@ func (s *Store) GetClientGroups(clientID int64) ([]domain.Group, error) {
 		}
 		g.Location = nullStr(location)
 		out = append(out, g)
+	}
+	return out, rows.Err()
+}
+
+func (s *Store) ClientsNotInGroup(groupID int64) ([]domain.Client, error) {
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.age, c.phone, c.status FROM clients c WHERE c.id NOT IN (SELECT gm.client_id FROM group_members gm WHERE gm.group_id = ?) AND c.status = 'active' ORDER BY c.full_name`, groupID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []domain.Client
+	for rows.Next() {
+		var c domain.Client
+		var userID sql.NullInt64
+		var fullName, phone, status sql.NullString
+		var age sql.NullInt64
+		if err := rows.Scan(&c.ID, &userID, &fullName, &age, &phone, &status); err != nil {
+			return nil, err
+		}
+		if userID.Valid {
+			c.UserID = &userID.Int64
+		}
+		if fullName.Valid {
+			c.FullName = fullName.String
+		}
+		if age.Valid {
+			v := int(age.Int64)
+			c.Age = &v
+		}
+		if phone.Valid {
+			c.Phone = &phone.String
+		}
+		if status.Valid {
+			c.Status = status.String
+		}
+		out = append(out, c)
 	}
 	return out, rows.Err()
 }

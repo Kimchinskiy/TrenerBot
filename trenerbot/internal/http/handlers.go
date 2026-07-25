@@ -934,6 +934,16 @@ func deleteClientSubscription(svc *service.Services, w http.ResponseWriter, r *h
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+func groupAvailableClients(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
+	clients, err := svc.ClientsNotInGroup(id)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "internal")
+		return
+	}
+	writeJSON(w, http.StatusOK, clients)
+}
+
 func removeClientFromGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	var body struct {

@@ -192,6 +192,7 @@ export interface Group {
   price?: number | null
   location?: string | null
   active: number
+  member_count: number
 }
 
 export interface ClientSubscription {
@@ -204,6 +205,60 @@ export interface ClientSubscription {
   lessons_left: number
   freeze: number
   created_at: string
+}
+
+export interface StatisticsResponse {
+  period: 'week' | 'month' | 'year'
+  date_from: string
+  date_to: string
+  trainings: MetricValue
+  clients: MetricValue
+  income: IncomeMetric
+  attendance: MetricValue
+  debtors: DebtorsSummary
+  income_chart: ChartPoint[]
+  quick_overview: QuickOverview
+}
+
+export interface MetricValue {
+  value: number
+  change: number
+  label: string
+}
+
+export interface IncomeMetric {
+  value: number
+  change: number
+  label: string
+}
+
+export interface DebtorsSummary {
+  count: number
+  total_debt: number
+  items: DebtorItem[]
+}
+
+export interface DebtorItem {
+  client_id: number
+  full_name: string
+  phone?: string
+  debt: number
+  ends_at?: string
+}
+
+export interface ChartPoint {
+  label: string
+  value: number
+}
+
+export interface QuickOverview {
+  new_clients: number
+  average_check: number
+  canceled_count: number
+  avg_attendance: number
+  avg_group_size: number
+  busiest_day: string
+  popular_time: string
 }
 
 export interface GroupMember {

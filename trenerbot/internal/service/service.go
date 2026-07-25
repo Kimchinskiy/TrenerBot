@@ -936,6 +936,10 @@ func (s *Services) GetClientGroups(clientID int64) ([]domain.Group, error) {
 	return s.Store.GetClientGroups(clientID)
 }
 
+func (s *Services) ClientsNotInGroup(groupID int64) ([]domain.Client, error) {
+	return s.Store.ClientsNotInGroup(groupID)
+}
+
 // ---------- Client Subscriptions ----------
 
 func (s *Services) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription, error) {

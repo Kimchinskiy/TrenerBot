@@ -207,6 +207,15 @@ export function useSaveParentNotifPref() {
   })
 }
 
+// --- Statistics ---
+export function useStatistics(period: string) {
+  return useQuery({
+    queryKey: ['statistics', period],
+    queryFn: () => endpoints.statistics(period),
+    enabled: !!period,
+  })
+}
+
 // --- Client Subscriptions ---
 export function useClientSubscriptions(clientId: number) {
   return useQuery({
@@ -280,6 +289,10 @@ export function useDeleteGroup() {
 
 export function useGroupClients(groupId: number) {
   return useQuery({ queryKey: ['groups', groupId, 'clients'], queryFn: () => endpoints.groupClients(groupId), enabled: !!groupId })
+}
+
+export function useGroupAvailableClients(groupId: number) {
+  return useQuery({ queryKey: ['groups', groupId, 'available-clients'], queryFn: () => endpoints.groupAvailableClients(groupId), enabled: !!groupId })
 }
 
 export function useAddClientToGroup() {

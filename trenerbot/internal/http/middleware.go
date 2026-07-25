@@ -306,6 +306,7 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Put("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateGroup))
 		r.Delete("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteGroup))
 		r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
+		r.Get("/groups/{id}/available-clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupAvailableClients))
 		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addClientToGroup))
 		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeClientFromGroup))
 

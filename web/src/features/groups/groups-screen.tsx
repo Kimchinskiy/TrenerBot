@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/lib/hooks'
 import { ScreenHeader, Spinner, ErrorBox, Empty } from '@/components/ui/screen'
 import { Card } from '@/components/ui/card'
@@ -12,13 +13,15 @@ function GroupCard({
   group,
   onEdit,
   onDelete,
+  onOpen,
 }: {
   group: Group
   onEdit: (g: Group) => void
   onDelete: (g: Group) => void
+  onOpen: (g: Group) => void
 }) {
   return (
-    <Card className="flex items-center gap-4">
+    <Card className="flex items-center gap-4 cursor-pointer transition-colors hover:bg-muted/20" onClick={() => onOpen(group)}>
       <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 shrink-0">
         <Users className="h-5 w-5 text-primary" />
       </div>
@@ -28,15 +31,16 @@ function GroupCard({
           {group.schedule && (
             <span className="text-xs text-muted-foreground">{group.schedule}</span>
           )}
+          <span className="text-xs text-muted-foreground">· {group.member_count ?? 0} учеников</span>
           {group.max_members && (
-            <span className="text-xs text-muted-foreground">· {group.max_members} чел.</span>
+            <span className="text-xs text-muted-foreground">/ {group.max_members}</span>
           )}
         </div>
         {group.price && (
           <span className="text-xs text-muted-foreground mt-0.5">{group.price} ₽</span>
         )}
       </div>
-      <div className="flex gap-1.5 shrink-0">
+      <div className="flex gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
         <button
           onClick={() => onEdit(group)}
           className="rounded-xl p-2 hover:bg-muted/50 transition-colors"
@@ -148,6 +152,7 @@ function CreateForm({
 }
 
 export default function GroupsScreen() {
+  const router = useRouter()
   const { data: groups, isLoading, error } = useGroups()
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
@@ -272,6 +277,7 @@ export default function GroupsScreen() {
                 group={g}
                 onEdit={setEditing}
                 onDelete={setDeleting}
+                onOpen={(g) => router.push(`/dashboard/groups/${g.id}`)}
               />
             ))}
           </div>
