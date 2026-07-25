@@ -22,6 +22,7 @@ import type {
   GroupMember,
   ClientSubscription,
   StatisticsResponse,
+  Lead,
 } from './types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api'
@@ -279,6 +280,9 @@ export const endpoints = {
     request<{ status: string }>(`/clients/${data.client_id}/subscriptions`, { method: 'PUT', body: JSON.stringify(data) }),
   deleteClientSubscription: (clientId: number, id: number) =>
     request<{ status: string }>(`/clients/${clientId}/subscriptions/${id}`, { method: 'DELETE' }),
+  leads: () => request<Lead[]>('/leads'),
+  approveLead: (id: number) => request<Lead>(`/leads/${id}`, { method: 'POST', body: JSON.stringify({ action: 'approve' }) }),
+  rejectLead: (id: number) => request<{ status: string }>(`/leads/${id}`, { method: 'POST', body: JSON.stringify({ action: 'reject' }) }),
   statistics: (period: string) => request<StatisticsResponse>(`/statistics?period=${period}`),
   faq: (q: string) => request<{ answer: string }>(`/faq?q=${encodeURIComponent(q)}`),
   dateAttendance: (date: string) => request<DateAttendanceResponse>(`/attendance/date/${date}`),

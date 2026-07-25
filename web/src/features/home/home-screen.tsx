@@ -2,12 +2,12 @@
 
 import { useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { useMe, useScheduleWeek } from '@/lib/hooks'
+import { useMe, useScheduleWeek, usePendingLeads } from '@/lib/hooks'
 import { weekFromToday } from '@/lib/dates'
 import { WaveDivider } from '@/components/ui/wave-divider'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
-import { Calendar, Clock, ArrowRight, Bell, CheckCircle, Users } from 'lucide-react'
+import { Calendar, Clock, ArrowRight, Bell, CheckCircle, Users, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 
 function getGreeting(): string {
@@ -77,6 +77,7 @@ export default function HomeScreen() {
   const { data: me, isLoading: meLoading } = useMe()
   const { from, to } = useMemo(() => weekFromToday(), [])
   const { data: schedule, isLoading: schedLoading } = useScheduleWeek(from, to)
+  const { data: pendingLeads } = usePendingLeads()
 
   const today = useMemo(() => {
     const d = new Date()
@@ -164,6 +165,26 @@ export default function HomeScreen() {
                 <ArrowRight className="h-4 w-4 text-muted-foreground" />
               </Card>
             </Link>
+            {(me?.role === 'admin' || me?.role === 'coach') && (
+              <Link href="/dashboard/leads">
+                <Card className="flex items-center gap-4 py-4 px-5 hover:shadow-elevated">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 shrink-0">
+                    <UserPlus className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-base font-bold text-foreground">Заявки</p>
+                    <p className="text-xs text-muted-foreground">
+                      {pendingLeads?.length ? `${pendingLeads.length} ожидают` : 'Новых нет'}
+                    </p>
+                  </div>
+                  {pendingLeads && pendingLeads.length > 0 && (
+                    <span className="flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-destructive text-[11px] font-bold text-destructive-foreground px-1.5">
+                      {pendingLeads.length}
+                    </span>
+                  )}
+                </Card>
+              </Link>
+            )}
           </div>
         </section>
       </div>

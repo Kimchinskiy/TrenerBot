@@ -1,0 +1,5 @@
+2026/07/24 20:05:30 INFO server listening addr=:8080
+2026/07/24 20:06:13 INFO http method=GET path=/api/statistics status=401 dur=1.0018ms
+2026/07/24 20:06:21 INFO http method=GET path=/api/statistics status=401 dur=0s
+2026/07/24 20:07:03 INFO http method=GET path=/api/statistics status=401 dur=0s
+exit status 0xffffffff

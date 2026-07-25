@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { endpoints } from './api'
-import type { SocialLink } from './types'
+import type { SocialLink, Lead } from './types'
 
 export function useMe() {
   return useQuery({ queryKey: ['me'], queryFn: () => endpoints.me() })
@@ -310,5 +310,26 @@ export function useRemoveClientFromGroup() {
     mutationFn: ({ groupId, clientId }: { groupId: number; clientId: number }) =>
       endpoints.removeClientFromGroup(groupId, clientId),
     onSuccess: (_vars, vars) => qc.invalidateQueries({ queryKey: ['groups', vars.groupId, 'clients'] }),
+  })
+}
+
+// --- Leads ---
+export function usePendingLeads() {
+  return useQuery({ queryKey: ['leads'], queryFn: () => endpoints.leads() })
+}
+
+export function useApproveLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => endpoints.approveLead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
+  })
+}
+
+export function useRejectLead() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number) => endpoints.rejectLead(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
 }

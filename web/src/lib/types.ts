@@ -261,6 +261,19 @@ export interface QuickOverview {
   popular_time: string
 }
 
+export interface Lead {
+  id: number
+  telegram_id: string
+  full_name: string
+  phone?: string | null
+  target_name?: string | null
+  target_age?: number | null
+  target_level: string
+  reg_type: string
+  status: string
+  created_at: string
+}
+
 export interface GroupMember {
   id: number
   group_id: number
