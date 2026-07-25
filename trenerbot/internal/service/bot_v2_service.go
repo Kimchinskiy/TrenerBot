@@ -8,7 +8,7 @@ import (
 // ---------- Students ----------
 
 func (s *Services) CreateStudent(st domain.Student) (int64, error) {
-	return s.Store.CreateStudent(st)
+	return s.Store.CreateStudentFull(st)
 }
 
 func (s *Services) StudentByID(id int64) (*domain.Student, error) {
@@ -71,7 +71,8 @@ func (s *Services) ApproveLead(leadID int64, reviewedBy int64) (*domain.Lead, er
 	if lead.RegType == "child" && lead.TargetName != nil {
 		studentName = *lead.TargetName
 	}
-	studentID, err := s.Store.CreateStudent(domain.Student{
+	studentID, err := s.Store.CreateStudentFull(domain.Student{
+		UserID:   &userID,
 		FullName: studentName,
 		Age:      studentAge,
 		Level:    lead.TargetLevel,
@@ -97,6 +98,13 @@ func (s *Services) ApproveLead(leadID int64, reviewedBy int64) (*domain.Lead, er
 
 	if err := s.Store.ApproveLead(leadID, userID, studentID, reviewedBy); err != nil {
 		return nil, err
+	}
+
+	// Link student to coach
+	if co, err := s.Store.CoachByUserID(reviewedBy); err == nil && co != nil {
+		if st, err := s.Store.StudentByUserID(userID); err == nil && st != nil {
+			_ = s.Store.SetStudentCoachID(st.ID, co.ID)
+		}
 	}
 
 	go s.Notify(userID, "lead_approved", map[string]any{

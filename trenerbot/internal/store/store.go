@@ -205,190 +205,145 @@ func (s *Store) RevokeAllRefreshTokens(userID int64) error {
 
 // ---------- Clients ----------
 
-func (s *Store) ClientByUserID(userID int64) (*domain.Client, error) {
-	c := &domain.Client{}
-	var birth, phone, tg, wa, email, med, note, reg, src, botAccess, subEnds sql.NullString
-	var age, parentID, secondParentID sql.NullInt64
-	var photo sql.NullString
+func (s *Store) StudentByUserID(userID int64) (*domain.Student, error) {
+	var st domain.Student
+	var photo, birth, phone, tg, wa, email, med, note, reg, src, level, addInfo, updatedAt, coachID sql.NullString
+	var age sql.NullInt64
+	var botAccess sql.NullString
 	err := s.DB.QueryRow(`SELECT id, user_id, full_name, photo, birth_date, age, phone, telegram, whatsapp,
-		parent_id, second_parent_id, email, medical_limits, note, status, registered_at, source, bot_access, subscription_ends_at
-		FROM clients WHERE user_id = ?`, userID).
-		Scan(&c.ID, &c.UserID, &c.FullName, &photo, &birth, &age, &phone, &tg, &wa,
-			&parentID, &secondParentID, &email, &med, &note, &c.Status, &reg, &src, &botAccess, &subEnds)
+		email, level, additional_info, medical_limits, note, status, registered_at, source, bot_access, coach_id, created_at, updated_at
+		FROM students WHERE user_id = ?`, userID).
+		Scan(&st.ID, &st.UserID, &st.FullName, &photo, &birth, &age, &phone, &tg, &wa,
+			&email, &level, &addInfo, &med, &note, &st.Status, &reg, &src, &botAccess, &coachID, &st.CreatedAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	assignNulls(c, photo, birth, age, phone, tg, wa, parentID, secondParentID, email, med, note, reg, src, botAccess, subEnds)
-	return c, nil
+	scanStudentFields(&st, photo, birth, phone, tg, wa, email, level, addInfo, med, note, reg, src, botAccess, coachID, updatedAt, age)
+	return &st, nil
 }
 
-func (s *Store) ClientByID(id int64) (*domain.Client, error) {
-	c := &domain.Client{}
-	var birth, phone, tg, wa, email, med, note, reg, src, botAccess, subEnds sql.NullString
-	var age, parentID, secondParentID sql.NullInt64
-	var photo sql.NullString
+func (s *Store) StudentByID(id int64) (*domain.Student, error) {
+	var st domain.Student
+	var photo, birth, phone, tg, wa, email, med, note, reg, src, level, addInfo, updatedAt, coachID sql.NullString
+	var age sql.NullInt64
+	var botAccess sql.NullString
 	err := s.DB.QueryRow(`SELECT id, user_id, full_name, photo, birth_date, age, phone, telegram, whatsapp,
-		parent_id, second_parent_id, email, medical_limits, note, status, registered_at, source, bot_access, subscription_ends_at
-		FROM clients WHERE id = ?`, id).
-		Scan(&c.ID, &c.UserID, &c.FullName, &photo, &birth, &age, &phone, &tg, &wa,
-			&parentID, &secondParentID, &email, &med, &note, &c.Status, &reg, &src, &botAccess, &subEnds)
+		email, level, additional_info, medical_limits, note, status, registered_at, source, bot_access, coach_id, created_at, updated_at
+		FROM students WHERE id = ?`, id).
+		Scan(&st.ID, &st.UserID, &st.FullName, &photo, &birth, &age, &phone, &tg, &wa,
+			&email, &level, &addInfo, &med, &note, &st.Status, &reg, &src, &botAccess, &coachID, &st.CreatedAt, &updatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	assignNulls(c, photo, birth, age, phone, tg, wa, parentID, secondParentID, email, med, note, reg, src, botAccess, subEnds)
-	return c, nil
+	scanStudentFields(&st, photo, birth, phone, tg, wa, email, level, addInfo, med, note, reg, src, botAccess, coachID, updatedAt, age)
+	return &st, nil
 }
 
-func assignNulls(c *domain.Client, photo, birth sql.NullString, age sql.NullInt64, phone, tg, wa sql.NullString,
-	parentID, secondParentID sql.NullInt64, email, med, note, reg, src, botAccess, subEnds sql.NullString) {
-	if photo.Valid {
-		v := photo.String
-		c.Photo = &v
-	}
-	if birth.Valid {
-		v := birth.String
-		c.BirthDate = &v
-	}
-	if age.Valid {
-		v := int(age.Int64)
-		c.Age = &v
-	}
-	if phone.Valid {
-		v := phone.String
-		c.Phone = &v
-	}
-	if tg.Valid {
-		v := tg.String
-		c.Telegram = &v
-	}
-	if wa.Valid {
-		v := wa.String
-		c.WhatsApp = &v
-	}
-	if parentID.Valid {
-		v := parentID.Int64
-		c.ParentID = &v
-	}
-	if secondParentID.Valid {
-		v := secondParentID.Int64
-		c.SecondParentID = &v
-	}
-	if email.Valid {
-		v := email.String
-		c.Email = &v
-	}
-	if med.Valid {
-		v := med.String
-		c.MedicalLimits = &v
-	}
-	if note.Valid {
-		v := note.String
-		c.Note = &v
-	}
-	if reg.Valid {
-		v := reg.String
-		c.RegisteredAt = &v
-	}
-	if src.Valid {
-		v := src.String
-		c.Source = &v
-	}
-	if botAccess.Valid {
-		c.BotAccess = botAccess.String == "1"
-	}
-	if subEnds.Valid {
-		v := subEnds.String
-		c.SubscriptionEndsAt = &v
-	}
+func scanStudentFields(st *domain.Student, photo, birth, phone, tg, wa, email, level, addInfo, med, note, reg, src, botAccess, coachID, updatedAt sql.NullString, age sql.NullInt64) {
+	if photo.Valid { st.Photo = &photo.String }
+	if birth.Valid { st.BirthDate = &birth.String }
+	if age.Valid { v := int(age.Int64); st.Age = &v }
+	if phone.Valid { st.Phone = &phone.String }
+	if tg.Valid { st.Telegram = &tg.String }
+	if wa.Valid { st.WhatsApp = &wa.String }
+	if email.Valid { st.Email = &email.String }
+	if level.Valid { st.Level = level.String }
+	if addInfo.Valid { st.AdditionalInfo = &addInfo.String }
+	if med.Valid { st.MedicalLimits = &med.String }
+	if note.Valid { st.Note = &note.String }
+	if reg.Valid { st.RegisteredAt = &reg.String }
+	if src.Valid { st.Source = &src.String }
+	if botAccess.Valid { st.BotAccess = botAccess.String == "1" }
+	if coachID.Valid { v, _ := strconv.ParseInt(coachID.String, 10, 64); st.CoachID = &v }
+	if updatedAt.Valid { st.UpdatedAt = &updatedAt.String }
 }
 
-func (s *Store) CreateClient(c domain.Client) (int64, error) {
+func (s *Store) CreateStudentFull(st domain.Student) (int64, error) {
 	botAccess := 0
-	if c.BotAccess {
+	if st.BotAccess {
 		botAccess = 1
 	}
-	var subEnds *string
-	if c.SubscriptionEndsAt != nil {
-		subEnds = c.SubscriptionEndsAt
-	}
-	res, err := s.DB.Exec(`INSERT INTO clients(user_id, full_name, photo, birth_date, age, phone, telegram,
-		whatsapp, parent_id, second_parent_id, email, medical_limits, note, status, registered_at, source, bot_access, subscription_ends_at)
+	res, err := s.DB.Exec(`INSERT INTO students(user_id, full_name, photo, birth_date, age, phone, telegram,
+		whatsapp, email, level, additional_info, medical_limits, note, status, registered_at, source, bot_access, coach_id)
 		VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-		c.UserID, c.FullName, c.Photo, c.BirthDate, c.Age, c.Phone, c.Telegram, c.WhatsApp,
-		c.ParentID, c.SecondParentID, c.Email, c.MedicalLimits, c.Note, c.Status, c.RegisteredAt, c.Source, botAccess, subEnds)
+		st.UserID, st.FullName, st.Photo, st.BirthDate, st.Age, st.Phone, st.Telegram, st.WhatsApp,
+		st.Email, st.Level, st.AdditionalInfo, st.MedicalLimits, st.Note, st.Status, st.RegisteredAt, st.Source, botAccess, st.CoachID)
 	if err != nil {
 		return 0, err
 	}
-	return res.LastInsertId()
+	id, err := res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+	// FK compat: ensure stub row exists in clients table
+	_, _ = s.DB.Exec("INSERT OR IGNORE INTO clients(id) VALUES (?)", id)
+	return id, nil
 }
 
-func (s *Store) UpdateClient(c domain.Client) error {
+func (s *Store) UpdateStudent(st domain.Student) error {
 	botAccess := 0
-	if c.BotAccess {
+	if st.BotAccess {
 		botAccess = 1
 	}
-	var subEnds *string
-	if c.SubscriptionEndsAt != nil {
-		subEnds = c.SubscriptionEndsAt
-	}
-	slog.Debug("UpdateClient", "id", c.ID, "botAccess", botAccess, "subEnds", subEnds)
-	_, err := s.DB.Exec(`UPDATE clients SET full_name=?, photo=?, birth_date=?, age=?, phone=?, telegram=?,
-		whatsapp=?, parent_id=?, second_parent_id=?, email=?, medical_limits=?, note=?, status=?, source=?, bot_access=?, subscription_ends_at=?
+	slog.Debug("UpdateStudent", "id", st.ID, "botAccess", botAccess)
+	_, err := s.DB.Exec(`UPDATE students SET full_name=?, photo=?, birth_date=?, age=?, phone=?, telegram=?,
+		whatsapp=?, email=?, level=?, additional_info=?, medical_limits=?, note=?, status=?, source=?, bot_access=?, coach_id=?
 		WHERE id=?`,
-		c.FullName, c.Photo, c.BirthDate, c.Age, c.Phone, c.Telegram, c.WhatsApp,
-		c.ParentID, c.SecondParentID, c.Email, c.MedicalLimits, c.Note, c.Status, c.Source, botAccess, subEnds, c.ID)
+		st.FullName, st.Photo, st.BirthDate, st.Age, st.Phone, st.Telegram, st.WhatsApp,
+		st.Email, st.Level, st.AdditionalInfo, st.MedicalLimits, st.Note, st.Status, st.Source, botAccess, st.CoachID, st.ID)
 	return err
 }
 
-func (s *Store) ListClients() ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.status, c.bot_access, c.subscription_ends_at FROM clients c WHERE c.full_name != '' AND c.full_name IS NOT NULL AND (c.user_id IS NULL OR c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) AND c.id IN (SELECT MIN(c2.id) FROM clients c2 WHERE c2.full_name != '' AND c2.full_name IS NOT NULL GROUP BY CASE WHEN c2.user_id IS NULL THEN c2.full_name ELSE CAST(c2.user_id AS TEXT) END) ORDER BY c.full_name`)
+func (s *Store) SetStudentCoachID(studentID, coachID int64) error {
+	_, err := s.DB.Exec(`UPDATE students SET coach_id = ? WHERE id = ?`, coachID, studentID)
+	return err
+}
+
+func (s *Store) ListStudents() ([]domain.Student, error) {
+	rows, err := s.DB.Query(`SELECT s.id, s.user_id, s.full_name, s.status, s.bot_access FROM students s WHERE s.full_name != '' AND s.full_name IS NOT NULL AND (s.user_id IS NULL OR s.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) AND s.id IN (SELECT MIN(s2.id) FROM students s2 WHERE s2.full_name != '' AND s2.full_name IS NOT NULL GROUP BY CASE WHEN s2.user_id IS NULL THEN s2.full_name ELSE CAST(s2.user_id AS TEXT) END) ORDER BY s.full_name`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Client
+	var out []domain.Student
 	for rows.Next() {
-		var c domain.Client
+		var st domain.Student
 		var uid sql.NullInt64
-		var botAccess, subEnds sql.NullString
-		if err := rows.Scan(&c.ID, &uid, &c.FullName, &c.Status, &botAccess, &subEnds); err != nil {
+		var botAccess sql.NullString
+		if err := rows.Scan(&st.ID, &uid, &st.FullName, &st.Status, &botAccess); err != nil {
 			return nil, err
 		}
 		if uid.Valid {
 			v := uid.Int64
-			c.UserID = &v
+			st.UserID = &v
 		}
 		if botAccess.Valid {
-			c.BotAccess = botAccess.String == "1"
-		}
-		if subEnds.Valid {
-			c.SubscriptionEndsAt = &subEnds.String
-		}
-		out = append(out, c)
+			st.BotAccess = botAccess.String == "1"		}
+		out = append(out, st)
 	}
 	return out, rows.Err()
 }
 
 // Children of a parent user (by parent_id linking to users.id).
-func (s *Store) ChildrenOfParent(parentUserID int64) ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT id, full_name, status FROM clients WHERE parent_id = ? OR second_parent_id = ? ORDER BY full_name`, parentUserID, parentUserID)
+func (s *Store) ChildrenOfParent(parentUserID int64) ([]domain.Student, error) {
+	rows, err := s.DB.Query(`SELECT s.id, s.full_name, s.status FROM students s JOIN relationships r ON r.student_id = s.id WHERE r.user_id = ? AND r.relation = 'parent' ORDER BY s.full_name`, parentUserID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Client
+	var out []domain.Student
 	for rows.Next() {
-		var c domain.Client
-		if err := rows.Scan(&c.ID, &c.FullName, &c.Status); err != nil {
+		var s domain.Student
+		if err := rows.Scan(&s.ID, &s.FullName, &s.Status); err != nil {
 			return nil, err
 		}
-		out = append(out, c)
+		out = append(out, s)
 	}
 	return out, rows.Err()
 }
@@ -601,7 +556,7 @@ func (s *Store) ListAttendanceByLesson(lessonID int64) ([]domain.Attendance, err
 		var present int
 		var markedAt sql.NullString
 		var markedBy sql.NullInt64
-		if err := rows.Scan(&a.LessonID, &a.ClientID, &present, &markedAt, &markedBy); err != nil {
+		if err := rows.Scan(&a.LessonID, &a.StudentID, &present, &markedAt, &markedBy); err != nil {
 			return nil, err
 		}
 		a.Present = present == 1
@@ -618,8 +573,8 @@ func (s *Store) ListAttendanceByLesson(lessonID int64) ([]domain.Attendance, err
 	return out, rows.Err()
 }
 
-func (s *Store) ListAttendanceByClient(clientID int64) ([]domain.Attendance, error) {
-	rows, err := s.DB.Query(`SELECT lesson_id, client_id, present, marked_at, marked_by FROM attendance WHERE client_id = ?`, clientID)
+func (s *Store) ListAttendanceByStudent(studentID int64) ([]domain.Attendance, error) {
+	rows, err := s.DB.Query(`SELECT lesson_id, client_id, present, marked_at, marked_by FROM attendance WHERE client_id = ?`, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -630,7 +585,7 @@ func (s *Store) ListAttendanceByClient(clientID int64) ([]domain.Attendance, err
 		var present int
 		var markedAt sql.NullString
 		var markedBy sql.NullInt64
-		if err := rows.Scan(&a.LessonID, &a.ClientID, &present, &markedAt, &markedBy); err != nil {
+		if err := rows.Scan(&a.LessonID, &a.StudentID, &present, &markedAt, &markedBy); err != nil {
 			return nil, err
 		}
 		a.Present = present == 1
@@ -757,7 +712,7 @@ func (s *Store) InsertFile(f domain.File) (int64, error) {
 
 func (s *Store) InsertLessonEntry(e domain.LessonEntry) (int64, error) {
 	res, err := s.DB.Exec(`INSERT INTO lesson_entries(date, time, client_id, coach_id, group_id, duration, status, comment)
-		VALUES (?,?,?,?,?,?,?,?)`, e.Date, e.Time, e.ClientID, e.CoachID, e.GroupID, e.Duration, string(e.Status), e.Comment)
+		VALUES (?,?,?,?,?,?,?,?)`, e.Date, e.Time, e.StudentID, e.CoachID, e.GroupID, e.Duration, string(e.Status), e.Comment)
 	if err != nil {
 		return 0, err
 	}
@@ -770,7 +725,7 @@ func (s *Store) InsertLessonEntry(e domain.LessonEntry) (int64, error) {
 func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([]domain.ScheduleEntry, error) {
 	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.full_name, le.coach_id, le.duration, le.status, le.group_id, g.name
 		FROM lesson_entries le
-		JOIN clients c ON c.id = le.client_id
+		JOIN students c ON c.id = le.client_id
 		LEFT JOIN groups g ON g.id = le.group_id
 		WHERE le.date >= ? AND le.date <= ?
 		AND (? <= 0 OR le.coach_id = ?)
@@ -785,7 +740,7 @@ func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([
 		var e domain.ScheduleEntry
 		var coachIDVal, groupIDVal sql.NullInt64
 		var groupName sql.NullString
-		if err := rows.Scan(&e.ID, &e.Date, &e.Time, &e.ClientID, &e.ClientName, &coachIDVal, &e.Duration, &e.Status, &groupIDVal, &groupName); err != nil {
+		if err := rows.Scan(&e.ID, &e.Date, &e.Time, &e.StudentID, &e.StudentName, &coachIDVal, &e.Duration, &e.Status, &groupIDVal, &groupName); err != nil {
 			return nil, err
 		}
 		if coachIDVal.Valid {
@@ -807,7 +762,7 @@ func (s *Store) ListScheduleEntries(from, to string, coachID, clientID int64) ([
 
 // ReminderEntry is the data needed for sending lesson reminders.
 type ReminderEntry struct {
-	ClientID   int64
+	StudentID  int64
 	UserID     int64
 	LessonID   int64
 	Date       string
@@ -817,11 +772,11 @@ type ReminderEntry struct {
 }
 
 // ListLessonEntriesForReminders returns planned lesson entries within [from, to]
-// joined with the client's user_id for notification delivery.
+// joined with the student's user_id for notification delivery.
 func (s *Store) ListLessonEntriesForReminders(from, to string) ([]ReminderEntry, error) {
 	rows, err := s.DB.Query(`SELECT le.id, le.date, le.time, le.client_id, c.user_id, le.coach_id
 		FROM lesson_entries le
-		JOIN clients c ON c.id = le.client_id
+		JOIN students c ON c.id = le.client_id
 		WHERE le.date >= ? AND le.date <= ? AND le.status = 'planned'
 		ORDER BY le.date, le.time`, from, to)
 	if err != nil {
@@ -832,7 +787,7 @@ func (s *Store) ListLessonEntriesForReminders(from, to string) ([]ReminderEntry,
 	for rows.Next() {
 		var e ReminderEntry
 		var uid, coachID sql.NullInt64
-		if err := rows.Scan(&e.LessonID, &e.Date, &e.Time, &e.ClientID, &uid, &coachID); err != nil {
+		if err := rows.Scan(&e.LessonID, &e.Date, &e.Time, &e.StudentID, &uid, &coachID); err != nil {
 			return nil, err
 		}
 		if uid.Valid {
@@ -856,36 +811,36 @@ func (s *Store) ListCoachRecipients(coachID int64, date string, groupID int64) (
 	if date != "" {
 		if coachID > 0 {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id
 				WHERE le.coach_id = ? AND le.date = ?`, coachID, date)
 		} else {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id
 				WHERE le.date = ?`, date)
 		}
 	} else if groupID > 0 {
 		if coachID > 0 {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id
 				WHERE le.coach_id = ? AND le.group_id = ?`, coachID, groupID)
 		} else {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id
 				WHERE le.group_id = ?`, groupID)
 		}
 	} else {
 		if coachID > 0 {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id
 				WHERE le.coach_id = ?`, coachID)
 		} else {
 			rows, err = s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.user_id
-				FROM clients c
+				FROM students c
 				JOIN lesson_entries le ON le.client_id = c.id`)
 		}
 	}
@@ -896,7 +851,7 @@ func (s *Store) ListCoachRecipients(coachID int64, date string, groupID int64) (
 	var out []domain.Recipient
 	for rows.Next() {
 		var r domain.Recipient
-		if err := rows.Scan(&r.ClientID, &r.FullName, &r.UserID); err != nil {
+		if err := rows.Scan(&r.StudentID, &r.FullName, &r.UserID); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -906,9 +861,9 @@ func (s *Store) ListCoachRecipients(coachID int64, date string, groupID int64) (
 
 // ---------- Daily attendance ----------
 
-func (s *Store) ListClientsWithLessonsOnDate(date string) ([]domain.DateAttendanceClient, error) {
+func (s *Store) ListStudentsWithLessonsOnDate(date string) ([]domain.DateAttendanceClient, error) {
 	rows, err := s.DB.Query(`SELECT DISTINCT c.id, c.full_name, c.photo, le.time
-		FROM clients c
+		FROM students c
 		JOIN lesson_entries le ON le.client_id = c.id
 		WHERE le.date = ? ORDER BY le.time, c.full_name`, date)
 	if err != nil {
@@ -919,7 +874,7 @@ func (s *Store) ListClientsWithLessonsOnDate(date string) ([]domain.DateAttendan
 	for rows.Next() {
 		var r domain.DateAttendanceClient
 		var avatar sql.NullString
-		if err := rows.Scan(&r.ClientID, &r.FullName, &avatar, &r.Time); err != nil {
+		if err := rows.Scan(&r.StudentID, &r.FullName, &avatar, &r.Time); err != nil {
 			return nil, err
 		}
 		if avatar.Valid {
@@ -956,7 +911,7 @@ func (s *Store) SaveDailyAttendance(date string, entries []domain.DailyAttendanc
 	for _, e := range entries {
 		_, err := tx.Exec(`INSERT INTO daily_attendance(date, client_id, present, marked_by, updated_at) VALUES (?,?,?,?,datetime('now'))
 			ON CONFLICT(date, client_id) DO UPDATE SET present=excluded.present, marked_by=excluded.marked_by, updated_at=excluded.updated_at`,
-			e.Date, e.ClientID, boolToInt(e.Present), e.MarkedBy)
+			e.Date, e.StudentID, boolToInt(e.Present), e.MarkedBy)
 		if err != nil {
 			_ = tx.Rollback()
 			return err
@@ -975,7 +930,7 @@ func (s *Store) ListRecipientsByIDs(ids []int64) ([]domain.Recipient, error) {
 	for i, id := range ids {
 		args[i] = id
 	}
-	rows, err := s.DB.Query(`SELECT id, full_name, user_id FROM clients WHERE id IN(`+placeholders[1:]+`)`, args...)
+	rows, err := s.DB.Query(`SELECT id, full_name, user_id FROM students WHERE id IN(`+placeholders[1:]+`)`, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -983,7 +938,7 @@ func (s *Store) ListRecipientsByIDs(ids []int64) ([]domain.Recipient, error) {
 	var out []domain.Recipient
 	for rows.Next() {
 		var r domain.Recipient
-		if err := rows.Scan(&r.ClientID, &r.FullName, &r.UserID); err != nil {
+		if err := rows.Scan(&r.StudentID, &r.FullName, &r.UserID); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
@@ -1054,16 +1009,16 @@ func (s *Store) ExtendCoachSubscription(coachID int64, days int) error {
 
 // ---------- Client Subscriptions ----------
 
-func (s *Store) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription, error) {
+func (s *Store) ClientSubscriptions(clientID int64) ([]domain.Subscription, error) {
 	rows, err := s.DB.Query(`SELECT id, client_id, type, price, bought_at, ends_at, lessons_left, freeze, created_at FROM subscriptions WHERE client_id = ? ORDER BY created_at DESC`, clientID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.ClientSubscription
+	var out []domain.Subscription
 	for rows.Next() {
-		var sub domain.ClientSubscription
-		if err := rows.Scan(&sub.ID, &sub.ClientID, &sub.Type, &sub.Price, &sub.BoughtAt, &sub.EndsAt, &sub.LessonsLeft, &sub.Freeze, &sub.CreatedAt); err != nil {
+		var sub domain.Subscription
+		if err := rows.Scan(&sub.ID, &sub.StudentID, &sub.Type, &sub.Price, &sub.BoughtAt, &sub.EndsAt, &sub.LessonsLeft, &sub.Freeze, &sub.CreatedAt); err != nil {
 			return nil, err
 		}
 		out = append(out, sub)
@@ -1071,18 +1026,18 @@ func (s *Store) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription
 	return out, rows.Err()
 }
 
-func (s *Store) CreateClientSubscription(sub domain.ClientSubscription) (int64, error) {
+func (s *Store) CreateClientSubscription(sub domain.Subscription) (int64, error) {
 	res, err := s.DB.Exec(`INSERT INTO subscriptions(client_id, type, price, bought_at, ends_at, lessons_left, freeze) VALUES(?,?,?,?,?,?,?)`,
-		sub.ClientID, sub.Type, sub.Price, sub.BoughtAt, sub.EndsAt, sub.LessonsLeft, sub.Freeze)
+		sub.StudentID, sub.Type, sub.Price, sub.BoughtAt, sub.EndsAt, sub.LessonsLeft, sub.Freeze)
 	if err != nil {
 		return 0, err
 	}
 	return res.LastInsertId()
 }
 
-func (s *Store) UpdateClientSubscription(sub domain.ClientSubscription) error {
+func (s *Store) UpdateClientSubscription(sub domain.Subscription) error {
 	_, err := s.DB.Exec(`UPDATE subscriptions SET type=?, price=?, ends_at=?, lessons_left=?, freeze=? WHERE id=? AND client_id=?`,
-		sub.Type, sub.Price, sub.EndsAt, sub.LessonsLeft, sub.Freeze, sub.ID, sub.ClientID)
+		sub.Type, sub.Price, sub.EndsAt, sub.LessonsLeft, sub.Freeze, sub.ID, sub.StudentID)
 	return err
 }
 
@@ -1093,42 +1048,67 @@ func (s *Store) DeleteClientSubscription(id int64) error {
 
 // ---------- Parent features ----------
 
-func (s *Store) ClientByBirthDate(fullName, birthDate string) (*domain.Client, error) {
-	c := &domain.Client{}
-	var birth, photo, phone, tg, wa, email, med, note, reg, src, botAccess, subEnds sql.NullString
-	var userID, age, parentID, secondParentID sql.NullInt64
+func (s *Store) StudentByBirthDate(fullName, birthDate string) (*domain.Student, error) {
+	var st domain.Student
+	var photo, phone, tg, wa, email, med, note, reg, src, botAccess sql.NullString
+	var userID, age sql.NullInt64
+	var birth sql.NullString
 	err := s.DB.QueryRow(`SELECT id, user_id, full_name, photo, birth_date, age, phone, telegram, whatsapp,
-		parent_id, second_parent_id, email, medical_limits, note, status, registered_at, source, bot_access, subscription_ends_at
-		FROM clients WHERE full_name = ? AND birth_date = ?`, fullName, birthDate).
-		Scan(&c.ID, &userID, &c.FullName, &photo, &birth, &age, &phone, &tg, &wa,
-			&parentID, &secondParentID, &email, &med, &note, &c.Status, &reg, &src, &botAccess, &subEnds)
+		email, medical_limits, note, status, registered_at, source, bot_access
+		FROM students WHERE full_name = ? AND birth_date = ?`, fullName, birthDate).
+		Scan(&st.ID, &userID, &st.FullName, &photo, &birth, &age, &phone, &tg, &wa,
+			&email, &med, &note, &st.Status, &reg, &src, &botAccess)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, err
 	}
-	assignNulls(c, photo, birth, age, phone, tg, wa, parentID, secondParentID, email, med, note, reg, src, botAccess, subEnds)
-	return c, nil
+	if userID.Valid {
+		st.UserID = &userID.Int64
+	}
+	if photo.Valid {
+		st.Photo = &photo.String
+	}
+	if birth.Valid {
+		st.BirthDate = &birth.String
+	}
+	if age.Valid {
+		v := int(age.Int64)
+		st.Age = &v
+	}
+	if phone.Valid {
+		st.Phone = &phone.String
+	}
+	if tg.Valid {
+		st.Telegram = &tg.String
+	}
+	if wa.Valid {
+		st.WhatsApp = &wa.String
+	}
+	if email.Valid {
+		st.Email = &email.String
+	}
+	if med.Valid {
+		st.MedicalLimits = &med.String
+	}
+	if note.Valid {
+		st.Note = &note.String
+	}
+	if reg.Valid {
+		st.RegisteredAt = &reg.String
+	}
+	if src.Valid {
+		st.Source = &src.String
+	}
+	if botAccess.Valid {
+		st.BotAccess = botAccess.String == "1"
+	}
+	return &st, nil
 }
 
-func (s *Store) LinkParentToChild(parentUserID int64, childClientID int64) error {
-	var currentParentID, currentSecondParentID sql.NullInt64
-	err := s.DB.QueryRow(`SELECT parent_id, second_parent_id FROM clients WHERE id = ?`, childClientID).Scan(&currentParentID, &currentSecondParentID)
-	if err != nil {
-		return err
-	}
-	if currentParentID.Valid && currentParentID.Int64 == parentUserID {
-		return nil
-	}
-	if currentSecondParentID.Valid && currentSecondParentID.Int64 == parentUserID {
-		return nil
-	}
-	if !currentParentID.Valid {
-		_, err = s.DB.Exec(`UPDATE clients SET parent_id = ? WHERE id = ?`, parentUserID, childClientID)
-	} else if !currentSecondParentID.Valid {
-		_, err = s.DB.Exec(`UPDATE clients SET second_parent_id = ? WHERE id = ?`, parentUserID, childClientID)
-	}
+func (s *Store) LinkParentToChild(parentUserID int64, studentID int64) error {
+	_, err := s.DB.Exec(`INSERT OR IGNORE INTO relationships(user_id, student_id, relation) VALUES(?, ?, 'parent')`, parentUserID, studentID)
 	return err
 }
 
@@ -1190,7 +1170,7 @@ func (s *Store) UpsertParentNotifPref(pref domain.ParentNotifPref) error {
 		VALUES (?,?,?,?,?)
 		ON CONFLICT(parent_user_id, child_id) DO UPDATE SET
 		lesson_start=excluded.lesson_start, lesson_end_15=excluded.lesson_end_15, lesson_missed=excluded.lesson_missed`,
-		pref.ParentUserID, pref.ChildID, boolToInt(pref.LessonStart), boolToInt(pref.LessonEnd15), boolToInt(pref.LessonMissed))
+		pref.ParentUserID, pref.StudentID, boolToInt(pref.LessonStart), boolToInt(pref.LessonEnd15), boolToInt(pref.LessonMissed))
 	return err
 }
 
@@ -1205,7 +1185,7 @@ func (s *Store) GetParentNotifPrefs(parentUserID int64) ([]domain.ParentNotifPre
 	for rows.Next() {
 		var p domain.ParentNotifPref
 		var start, end15, missed int
-		if err := rows.Scan(&p.ID, &p.ParentUserID, &p.ChildID, &start, &end15, &missed); err != nil {
+		if err := rows.Scan(&p.ID, &p.ParentUserID, &p.StudentID, &start, &end15, &missed); err != nil {
 			return nil, err
 		}
 		p.LessonStart = start == 1
@@ -1259,24 +1239,19 @@ func (s *Store) SeedDefaultSocialLinks(coachID int64) error {
 	return nil
 }
 
-func (s *Store) ListParentUserIDsByChildID(childID int64) ([]int64, error) {
-	rows, err := s.DB.Query(`SELECT parent_id, second_parent_id FROM clients WHERE id = ? AND (parent_id IS NOT NULL OR second_parent_id IS NOT NULL)`, childID)
+func (s *Store) ListParentUserIDsByChildID(studentID int64) ([]int64, error) {
+	rows, err := s.DB.Query(`SELECT user_id FROM relationships WHERE student_id = ? AND relation = 'parent'`, studentID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []int64
 	for rows.Next() {
-		var p1, p2 sql.NullInt64
-		if err := rows.Scan(&p1, &p2); err != nil {
+		var uid int64
+		if err := rows.Scan(&uid); err != nil {
 			return nil, err
 		}
-		if p1.Valid {
-			out = append(out, p1.Int64)
-		}
-		if p2.Valid {
-			out = append(out, p2.Int64)
-		}
+		out = append(out, uid)
 	}
 	return out, nil
 }
@@ -1359,18 +1334,18 @@ func (s *Store) DeleteGroup(id int64) error {
 	return err
 }
 
-func (s *Store) AddClientToGroup(groupID, clientID int64, role string) error {
-	_, err := s.DB.Exec(`INSERT OR IGNORE INTO group_members(group_id, client_id, role) VALUES(?,?,?)`, groupID, clientID, role)
+func (s *Store) AddStudentToGroup(groupID, studentID int64, role string) error {
+	_, err := s.DB.Exec(`INSERT OR IGNORE INTO group_members(group_id, client_id, role) VALUES(?, ?, ?)`, groupID, studentID, role)
 	return err
 }
 
-func (s *Store) RemoveClientFromGroup(groupID, clientID int64) error {
-	_, err := s.DB.Exec(`DELETE FROM group_members WHERE group_id = ? AND client_id = ?`, groupID, clientID)
+func (s *Store) RemoveStudentFromGroup(groupID, studentID int64) error {
+	_, err := s.DB.Exec(`DELETE FROM group_members WHERE group_id = ? AND client_id = ?`, groupID, studentID)
 	return err
 }
 
-func (s *Store) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
-	rows, err := s.DB.Query(`SELECT gm.id, gm.group_id, gm.client_id, gm.role, gm.joined_at, c.full_name FROM group_members gm JOIN clients c ON c.id = gm.client_id WHERE gm.group_id = ? ORDER BY c.full_name`, groupID)
+func (s *Store) GetGroupStudents(groupID int64) ([]domain.GroupMember, error) {
+	rows, err := s.DB.Query(`SELECT gm.id, gm.group_id, gm.client_id, gm.role, gm.joined_at, c.full_name FROM group_members gm JOIN students c ON c.id = gm.client_id WHERE gm.group_id = ? ORDER BY c.full_name`, groupID)
 	if err != nil {
 		return nil, err
 	}
@@ -1378,7 +1353,7 @@ func (s *Store) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
 	var out []domain.GroupMember
 	for rows.Next() {
 		var m domain.GroupMember
-		if err := rows.Scan(&m.ID, &m.GroupID, &m.ClientID, &m.Role, &m.JoinedAt, &m.ClientName); err != nil {
+		if err := rows.Scan(&m.ID, &m.GroupID, &m.StudentID, &m.Role, &m.JoinedAt, &m.StudentName); err != nil {
 			return nil, err
 		}
 		out = append(out, m)
@@ -1386,8 +1361,8 @@ func (s *Store) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) GetClientGroups(clientID int64) ([]domain.Group, error) {
-	rows, err := s.DB.Query(`SELECT g.id, g.name, g.coach_id, g.max_members, g.schedule, g.price, g.location, g.active FROM groups g JOIN group_members gm ON gm.group_id = g.id WHERE gm.client_id = ? AND g.active = 1 ORDER BY g.name`, clientID)
+func (s *Store) GetStudentGroups(studentID int64) ([]domain.Group, error) {
+	rows, err := s.DB.Query(`SELECT g.id, g.name, g.coach_id, g.max_members, g.schedule, g.price, g.location, g.active FROM groups g JOIN group_members gm ON gm.group_id = g.id WHERE gm.client_id = ? AND g.active = 1 ORDER BY g.name`, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -1416,38 +1391,38 @@ func (s *Store) GetClientGroups(clientID int64) ([]domain.Group, error) {
 	return out, rows.Err()
 }
 
-func (s *Store) ClientsNotInGroup(groupID int64) ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.age, c.phone, c.status FROM clients c WHERE c.id NOT IN (SELECT gm.client_id FROM group_members gm WHERE gm.group_id = ?) AND c.status = 'active' AND (c.user_id IS NULL OR c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) ORDER BY c.full_name`, groupID)
+func (s *Store) StudentsNotInGroup(groupID int64) ([]domain.Student, error) {
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.age, c.phone, c.status FROM students c WHERE c.id NOT IN (SELECT gm.client_id FROM group_members gm WHERE gm.group_id = ?) AND c.status = 'active' AND (c.user_id IS NULL OR c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) ORDER BY c.full_name`, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var out []domain.Client
+	var out []domain.Student
 	for rows.Next() {
-		var c domain.Client
+		var st domain.Student
 		var userID sql.NullInt64
 		var fullName, phone, status sql.NullString
 		var age sql.NullInt64
-		if err := rows.Scan(&c.ID, &userID, &fullName, &age, &phone, &status); err != nil {
+		if err := rows.Scan(&st.ID, &userID, &fullName, &age, &phone, &status); err != nil {
 			return nil, err
 		}
 		if userID.Valid {
-			c.UserID = &userID.Int64
+			st.UserID = &userID.Int64
 		}
 		if fullName.Valid {
-			c.FullName = fullName.String
+			st.FullName = fullName.String
 		}
 		if age.Valid {
 			v := int(age.Int64)
-			c.Age = &v
+			st.Age = &v
 		}
 		if phone.Valid {
-			c.Phone = &phone.String
+			st.Phone = &phone.String
 		}
 		if status.Valid {
-			c.Status = status.String
+			st.Status = status.String
 		}
-		out = append(out, c)
+		out = append(out, st)
 	}
 	return out, rows.Err()
 }

@@ -36,8 +36,8 @@ func authTelegram(svc *service.Services, w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, map[string]any{"user": u, "client": client, "token": tok})
 }
 
-func listClients(svc *service.Services, w http.ResponseWriter, _ *http.Request) {
-	cs, err := svc.ListClients()
+func listStudents(svc *service.Services, w http.ResponseWriter, _ *http.Request) {
+	cs, err := svc.ListStudents()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
@@ -56,37 +56,37 @@ func clientsMe(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"role": u.Role, "children": children})
 		return
 	}
-	c, err := svc.Store.ClientByUserID(u.ID)
+	st, err := svc.Store.StudentByUserID(u.ID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	if c == nil {
+	if st == nil {
 		writeJSON(w, http.StatusOK, map[string]any{"role": u.Role})
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"role": u.Role, "client": c})
+	writeJSON(w, http.StatusOK, map[string]any{"role": u.Role, "client": st})
 }
 
 func getClient(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	c, err := svc.GetClient(id)
-	if err != nil || c == nil {
+	st, err := svc.GetStudent(id)
+	if err != nil || st == nil {
 		writeError(w, http.StatusNotFound, "not found")
 		return
 	}
-	writeJSON(w, http.StatusOK, c)
+	writeJSON(w, http.StatusOK, st)
 }
 
 func updateClient(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	var c domain.Client
-	if err := json.NewDecoder(r.Body).Decode(&c); err != nil {
+	var st domain.Student
+	if err := json.NewDecoder(r.Body).Decode(&st); err != nil {
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
-	c.ID = id
-	if err := svc.UpdateClient(c); err != nil {
+	st.ID = id
+	if err := svc.UpdateStudent(st); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
@@ -162,12 +162,12 @@ func listLessons(svc *service.Services, w http.ResponseWriter, r *http.Request) 
 	u := UserFrom(r.Context())
 	switch u.Role {
 	case domain.RoleClient:
-		c, err := svc.Store.ClientByUserID(u.ID)
-		if err != nil || c == nil {
+		st, err := svc.Store.StudentByUserID(u.ID)
+		if err != nil || st == nil {
 			writeError(w, http.StatusNotFound, "client not found")
 			return
 		}
-		lessons, err := svc.ClientSchedule(c.ID, from)
+		lessons, err := svc.ClientSchedule(st.ID, from)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "internal")
 			return
@@ -367,9 +367,9 @@ func scheduleHandler(svc *service.Services, w http.ResponseWriter, r *http.Reque
 			coachID = co.ID
 		}
 	} else if u.Role == domain.RoleClient {
-		c, err := svc.Store.ClientByUserID(u.ID)
-		if err == nil && c != nil {
-			clientID = c.ID
+		st, err := svc.Store.StudentByUserID(u.ID)
+		if err == nil && st != nil {
+			clientID = st.ID
 		}
 	}
 	entries, err := svc.GetSchedule(from, to, u.Role, u.ID, coachID, clientID)
@@ -428,7 +428,7 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 
 	var createdIDs []int64
 	if body.GroupID > 0 {
-		members, err := svc.GetGroupClients(body.GroupID)
+		members, err := svc.GetGroupStudents(body.GroupID)
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, "internal")
 			return
@@ -439,13 +439,13 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 		}
 		for _, m := range members {
 			id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
-				Date:     body.Date,
-				Time:     body.Time,
-				ClientID: m.ClientID,
-				CoachID:  coachID,
-				Duration: body.Duration,
-				Status:   domain.LessonPlanned,
-				GroupID:  &body.GroupID,
+				Date:      body.Date,
+				Time:      body.Time,
+				StudentID: m.StudentID,
+				CoachID:   coachID,
+				Duration:  body.Duration,
+				Status:    domain.LessonPlanned,
+				GroupID:   &body.GroupID,
 			})
 			if err != nil {
 				writeError(w, http.StatusInternalServerError, "internal")
@@ -455,9 +455,9 @@ func createScheduleEntry(svc *service.Services, w http.ResponseWriter, r *http.R
 		}
 	} else {
 		id, err := svc.Store.InsertLessonEntry(domain.LessonEntry{
-			Date:     body.Date,
-			Time:     body.Time,
-			ClientID: body.ClientID,
+			Date:      body.Date,
+			Time:      body.Time,
+			StudentID: body.ClientID,
 			CoachID:  coachID,
 			Duration: body.Duration,
 			Status:   domain.LessonPlanned,
@@ -619,9 +619,9 @@ func submitWellbeing(svc *service.Services, w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusForbidden, "clients only")
 		return
 	}
-	c, err := svc.Store.ClientByUserID(u.ID)
-	if err != nil || c == nil {
-		writeError(w, http.StatusNotFound, "client not found")
+	st, err := svc.Store.StudentByUserID(u.ID)
+	if err != nil || st == nil {
+		writeError(w, http.StatusNotFound, "student not found")
 		return
 	}
 	var body struct {
@@ -633,7 +633,7 @@ func submitWellbeing(svc *service.Services, w http.ResponseWriter, r *http.Reque
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
-	if err := svc.ClientWellbeingFeedback(c.ID, body.LessonID, body.Wellbeing, body.Note); err != nil {
+	if err := svc.ClientWellbeingFeedback(st.ID, body.LessonID, body.Wellbeing, body.Note); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
@@ -642,7 +642,7 @@ func submitWellbeing(svc *service.Services, w http.ResponseWriter, r *http.Reque
 
 func wellbeingHistory(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	clientID, _ := strconv.ParseInt(chi.URLParam(r, "client_id"), 10, 64)
-	history, err := svc.GetClientWellbeingHistory(clientID)
+	history, err := svc.GetStudentWellbeingHistory(clientID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
@@ -661,14 +661,14 @@ func adminListClients(svc *service.Services, w http.ResponseWriter, r *http.Requ
 	limit := 20
 	offset := (page - 1) * limit
 
-	clients, err := svc.Store.ListClients()
+	students, err := svc.Store.ListStudents()
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 
 	// Add pagination
-	total := len(clients)
+	total := len(students)
 	start := offset
 	if start > total {
 		start = total
@@ -679,7 +679,7 @@ func adminListClients(svc *service.Services, w http.ResponseWriter, r *http.Requ
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"clients": clients[start:end],
+		"clients": students[start:end],
 		"page":    page,
 		"total":   total,
 		"limit":   limit,
@@ -709,51 +709,39 @@ func adminGrantBotAccess(svc *service.Services, w http.ResponseWriter, r *http.R
 		body.SubscriptionDays = 30
 	}
 
-	// Get client
-	slog.Debug("adminGrantBotAccess looking for client", "client_id", body.ClientID)
-	client, err := svc.Store.ClientByID(body.ClientID)
+	// Get student
+	slog.Debug("adminGrantBotAccess looking for student", "client_id", body.ClientID)
+	student, err := svc.Store.StudentByID(body.ClientID)
 	if err != nil {
-		slog.Error("adminGrantBotAccess ClientByID error", "err", err)
-		writeError(w, http.StatusNotFound, "client not found: "+err.Error())
+		slog.Error("adminGrantBotAccess StudentByID error", "err", err)
+		writeError(w, http.StatusNotFound, "student not found: "+err.Error())
 		return
 	}
-	if client == nil {
-		slog.Debug("adminGrantBotAccess client is nil")
-		writeError(w, http.StatusNotFound, "client not found")
+	if student == nil {
+		slog.Debug("adminGrantBotAccess student is nil")
+		writeError(w, http.StatusNotFound, "student not found")
 		return
 	}
-	slog.Debug("adminGrantBotAccess found client", "id", client.ID, "name", client.FullName)
+	slog.Debug("adminGrantBotAccess found student", "id", student.ID, "name", student.FullName)
 
-	// Update client with bot access
-	client.BotAccess = true
-	endsAt := time.Now().AddDate(0, 0, body.SubscriptionDays).Format("2006-01-02")
-	client.SubscriptionEndsAt = &endsAt
+	// Update student with bot access
+	student.BotAccess = true
 
-	if body.TelegramID != "" {
-		// Link telegram ID to user if exists
-		if client.UserID != nil {
-			_, err := svc.Store.DB.Exec(`UPDATE users SET telegram_id = ? WHERE id = ?`, body.TelegramID, *client.UserID)
-			if err != nil {
-				writeError(w, http.StatusInternalServerError, "failed to link telegram")
-				return
-			}
+	// Link telegram ID to user if exists
+	if student.UserID != nil && body.TelegramID != "" {
+		_, err := svc.Store.DB.Exec(`UPDATE users SET telegram_id = ? WHERE id = ?`, body.TelegramID, *student.UserID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to link telegram")
+			return
 		}
 	}
 
-	if err := svc.Store.UpdateClient(*client); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update client")
+	if err := svc.Store.UpdateStudent(*student); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update student")
 		return
 	}
 
-	// Notify client if they have telegram
-	if client.Telegram != nil {
-		svc.Notify(*client.UserID, "bot_access_granted", map[string]any{
-			"ends_at": endsAt,
-			"message": "Вам выдан доступ к боту на " + strconv.Itoa(body.SubscriptionDays) + " дней!",
-		}, time.Now())
-	}
-
-	writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "ends_at": endsAt})
+	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func adminRevokeBotAccess(svc *service.Services, w http.ResponseWriter, r *http.Request) {
@@ -765,17 +753,16 @@ func adminRevokeBotAccess(svc *service.Services, w http.ResponseWriter, r *http.
 		return
 	}
 
-	client, err := svc.Store.ClientByID(body.ClientID)
-	if err != nil || client == nil {
-		writeError(w, http.StatusNotFound, "client not found")
+	student, err := svc.Store.StudentByID(body.ClientID)
+	if err != nil || student == nil {
+		writeError(w, http.StatusNotFound, "student not found")
 		return
 	}
 
-	client.BotAccess = false
-	client.SubscriptionEndsAt = nil
+	student.BotAccess = false
 
-	if err := svc.Store.UpdateClient(*client); err != nil {
-		writeError(w, http.StatusInternalServerError, "failed to update client")
+	if err := svc.Store.UpdateStudent(*student); err != nil {
+		writeError(w, http.StatusInternalServerError, "failed to update student")
 		return
 	}
 
@@ -850,7 +837,7 @@ func deleteGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) 
 
 func groupClients(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	members, err := svc.GetGroupClients(id)
+	members, err := svc.GetGroupStudents(id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
@@ -858,7 +845,7 @@ func groupClients(svc *service.Services, w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, members)
 }
 
-func addClientToGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+func addStudentToGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	var body struct {
 		ClientID int64  `json:"client_id"`
@@ -871,18 +858,18 @@ func addClientToGroup(svc *service.Services, w http.ResponseWriter, r *http.Requ
 	if body.Role == "" {
 		body.Role = "member"
 	}
-	if err := svc.AddClientToGroup(id, body.ClientID, body.Role); err != nil {
+	if err := svc.AddStudentToGroup(id, body.ClientID, body.Role); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// ---------- Client Subscriptions ----------
+// ---------- Student Subscriptions ----------
 
 func listClientSubscriptions(svc *service.Services, w http.ResponseWriter, r *http.Request) {
-	clientID, _ := strconv.ParseInt(chi.URLParam(r, "client_id"), 10, 64)
-	subs, err := svc.ClientSubscriptions(clientID)
+	studentID, _ := strconv.ParseInt(chi.URLParam(r, "client_id"), 10, 64)
+	subs, err := svc.ClientSubscriptions(studentID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
@@ -891,12 +878,12 @@ func listClientSubscriptions(svc *service.Services, w http.ResponseWriter, r *ht
 }
 
 func createClientSubscription(svc *service.Services, w http.ResponseWriter, r *http.Request) {
-	var sub domain.ClientSubscription
+	var sub domain.Subscription
 	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
 	}
-	if sub.ClientID == 0 || sub.Type == "" {
+	if sub.StudentID == 0 || sub.Type == "" {
 		writeError(w, http.StatusBadRequest, "client_id and type required")
 		return
 	}
@@ -909,7 +896,7 @@ func createClientSubscription(svc *service.Services, w http.ResponseWriter, r *h
 }
 
 func updateClientSubscription(svc *service.Services, w http.ResponseWriter, r *http.Request) {
-	var sub domain.ClientSubscription
+	var sub domain.Subscription
 	if err := json.NewDecoder(r.Body).Decode(&sub); err != nil {
 		writeError(w, http.StatusBadRequest, "bad json")
 		return
@@ -934,17 +921,17 @@ func deleteClientSubscription(svc *service.Services, w http.ResponseWriter, r *h
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-func groupAvailableClients(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+func groupAvailableStudents(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
-	clients, err := svc.ClientsNotInGroup(id)
+	students, err := svc.StudentsNotInGroup(id)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}
-	writeJSON(w, http.StatusOK, clients)
+	writeJSON(w, http.StatusOK, students)
 }
 
-func removeClientFromGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
+func removeStudentFromGroup(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	var body struct {
 		ClientID int64 `json:"client_id"`
@@ -953,7 +940,7 @@ func removeClientFromGroup(svc *service.Services, w http.ResponseWriter, r *http
 		writeError(w, http.StatusBadRequest, "client_id required")
 		return
 	}
-	if err := svc.RemoveClientFromGroup(id, body.ClientID); err != nil {
+	if err := svc.RemoveStudentFromGroup(id, body.ClientID); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}

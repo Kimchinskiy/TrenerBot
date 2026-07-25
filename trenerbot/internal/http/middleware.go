@@ -211,7 +211,7 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Post("/auth/set-password", setPassword(svc))
 
 		// Clients
-		r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClients))
+		r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listStudents))
 		r.Get("/clients/me", func(w http.ResponseWriter, r *http.Request) { clientsMe(svc, w, r) })
 		r.Get("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getClient))
 		r.Put("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, updateClient))
@@ -306,9 +306,9 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Put("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateGroup))
 		r.Delete("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteGroup))
 		r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
-		r.Get("/groups/{id}/available-clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupAvailableClients))
-		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addClientToGroup))
-		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeClientFromGroup))
+		r.Get("/groups/{id}/available-clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupAvailableStudents))
+		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addStudentToGroup))
+		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeStudentFromGroup))
 
 		// Statistics
 		r.Get("/statistics", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, statisticsHandler))

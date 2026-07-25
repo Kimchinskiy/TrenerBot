@@ -35,8 +35,8 @@ type TelegramLoginRequest struct {
 	Source        string `json:"source"`
 }
 
-// TelegramLogin resolves (or creates) a client account linked to a Telegram ID and returns a JWT.
-func (s *Services) TelegramLogin(req TelegramLoginRequest) (*domain.User, *domain.Client, string, error) {
+// TelegramLogin resolves (or creates) a student account linked to a Telegram ID and returns a JWT.
+func (s *Services) TelegramLogin(req TelegramLoginRequest) (*domain.User, *domain.Student, string, error) {
 	u, err := s.Store.UserByTelegram(req.TelegramID)
 	if err != nil {
 		return nil, nil, "", err
@@ -47,7 +47,7 @@ func (s *Services) TelegramLogin(req TelegramLoginRequest) (*domain.User, *domai
 			return nil, nil, "", err
 		}
 		src := req.Source
-		c := domain.Client{
+		st := domain.Student{
 			UserID:        &uid,
 			FullName:      req.FullName,
 			Phone:         nullable(req.Phone),
@@ -56,50 +56,49 @@ func (s *Services) TelegramLogin(req TelegramLoginRequest) (*domain.User, *domai
 			Status:        "active",
 			Source:        nullable(src),
 		}
-		cid, err := s.Store.CreateClient(c)
+		sid, err := s.Store.CreateStudentFull(st)
 		if err != nil {
 			return nil, nil, "", err
 		}
 		u = &domain.User{ID: uid, TelegramID: &req.TelegramID, Role: domain.RoleClient}
-		client, _ := s.Store.ClientByID(cid)
+		student, _ := s.Store.StudentByID(sid)
 		tok, err := s.Tokens.Generate(uid, u.Role)
 		if err != nil {
 			return nil, nil, "", err
 		}
-		// notify all coaches about a new client
 		_ = s.notifyCoaches("new_client", map[string]any{"user_id": uid, "name": req.FullName})
-		return u, client, tok, nil
+		return u, student, tok, nil
 	}
 
-	// existing user: refresh client profile if provided
+	// existing user: refresh student profile if provided
 	if u.Role == domain.RoleClient {
-		c, err := s.Store.ClientByUserID(u.ID)
+		st, err := s.Store.StudentByUserID(u.ID)
 		if err != nil {
 			return nil, nil, "", err
 		}
-		if c != nil && req.FullName != "" {
-			c.FullName = req.FullName
+		if st != nil && req.FullName != "" {
+			st.FullName = req.FullName
 			if req.Phone != "" {
 				v := req.Phone
-				c.Phone = &v
+				st.Phone = &v
 			}
 			if req.Age > 0 {
 				v := req.Age
-				c.Age = &v
+				st.Age = &v
 			}
 			if req.MedicalLimits != "" {
 				v := req.MedicalLimits
-				c.MedicalLimits = &v
+				st.MedicalLimits = &v
 			}
-			_ = s.Store.UpdateClient(*c)
+			_ = s.Store.UpdateStudent(*st)
 		}
 	}
 	tok, err := s.Tokens.Generate(u.ID, u.Role)
 	if err != nil {
 		return nil, nil, "", err
 	}
-	client, _ := s.Store.ClientByUserID(u.ID)
-	return u, client, tok, nil
+	student, _ := s.Store.StudentByUserID(u.ID)
+	return u, student, tok, nil
 }
 
 func (s *Services) notifyCoaches(typ string, payload map[string]any) error {
@@ -136,13 +135,13 @@ func (s *Services) SetTelegramID(userID int64, telegramID string) error {
 
 // ---------- Clients ----------
 
-func (s *Services) GetClient(id int64) (*domain.Client, error) { return s.Store.ClientByID(id) }
+func (s *Services) GetStudent(id int64) (*domain.Student, error) { return s.Store.StudentByID(id) }
 
-func (s *Services) ListClients() ([]domain.Client, error) { return s.Store.ListClients() }
+func (s *Services) ListStudents() ([]domain.Student, error) { return s.Store.ListStudents() }
 
-func (s *Services) UpdateClient(c domain.Client) error { return s.Store.UpdateClient(c) }
+func (s *Services) UpdateStudent(st domain.Student) error { return s.Store.UpdateStudent(st) }
 
-func (s *Services) ChildrenOfParent(parentUserID int64) ([]domain.Client, error) {
+func (s *Services) ChildrenOfParent(parentUserID int64) ([]domain.Student, error) {
 	return s.Store.ChildrenOfParent(parentUserID)
 }
 
@@ -234,8 +233,8 @@ func (s *Services) NotifyLessonChange(lessonID int64, changeType string, oldVal,
 		return err
 	}
 	for _, cid := range parts {
-		c, err := s.Store.ClientByID(cid)
-		if err != nil || c == nil || c.UserID == nil {
+		st, err := s.Store.StudentByID(cid)
+		if err != nil || st == nil || st.UserID == nil {
 			continue
 		}
 		payload := map[string]any{
@@ -248,7 +247,7 @@ func (s *Services) NotifyLessonChange(lessonID int64, changeType string, oldVal,
 			"new_value":   newVal,
 		}
 		b, _ := json.Marshal(payload)
-		_ = s.enqueue(*c.UserID, "lesson_change", string(b), time.Now())
+		_ = s.enqueue(*st.UserID, "lesson_change", string(b), time.Now())
 	}
 	return nil
 }
@@ -264,8 +263,8 @@ func (s *Services) NotifyLessonCanceled(lessonID int64, reason string) error {
 		return err
 	}
 	for _, cid := range parts {
-		c, err := s.Store.ClientByID(cid)
-		if err != nil || c == nil || c.UserID == nil {
+		st, err := s.Store.StudentByID(cid)
+		if err != nil || st == nil || st.UserID == nil {
 			continue
 		}
 		payload := map[string]any{
@@ -276,7 +275,7 @@ func (s *Services) NotifyLessonCanceled(lessonID int64, reason string) error {
 			"reason":    reason,
 		}
 		b, _ := json.Marshal(payload)
-		_ = s.enqueue(*c.UserID, "lesson_canceled", string(b), time.Now())
+		_ = s.enqueue(*st.UserID, "lesson_canceled", string(b), time.Now())
 	}
 	return nil
 }
@@ -462,15 +461,15 @@ func (s *Services) ClientWellbeingFeedback(clientID int64, lessonID int64, wellb
 	return err
 }
 
-// GetClientWellbeingHistory returns wellbeing history for a client.
-func (s *Services) GetClientWellbeingHistory(clientID int64) ([]map[string]any, error) {
+// GetStudentWellbeingHistory returns wellbeing history for a student.
+func (s *Services) GetStudentWellbeingHistory(studentID int64) ([]map[string]any, error) {
 	rows, err := s.Store.DB.Query(`
 		SELECT al.id, al.ref_id, al.note, al.created_at, l.date, l.time
 		FROM activity_log al
 		LEFT JOIN lessons l ON l.id = al.ref_id
 		WHERE al.client_id = ? AND al.type = 'wellbeing'
 		ORDER BY al.created_at DESC
-	`, clientID)
+	`, studentID)
 	if err != nil {
 		return nil, err
 	}
@@ -590,7 +589,7 @@ func (s *Services) SendCoachNotification(coachID int64, filter string, groupID i
 // ---------- Daily attendance ----------
 
 func (s *Services) GetDateAttendance(date string) ([]domain.DateAttendanceClient, error) {
-	clients, err := s.Store.ListClientsWithLessonsOnDate(date)
+	clients, err := s.Store.ListStudentsWithLessonsOnDate(date)
 	if err != nil {
 		return nil, err
 	}
@@ -599,7 +598,7 @@ func (s *Services) GetDateAttendance(date string) ([]domain.DateAttendanceClient
 		return nil, err
 	}
 	for i := range clients {
-		if p, ok := existing[clients[i].ClientID]; ok {
+		if p, ok := existing[clients[i].StudentID]; ok {
 			v := p
 			clients[i].Present = &v
 		}
@@ -665,11 +664,11 @@ type Report struct {
 
 func (s *Services) Report(from, to string) (*Report, error) {
 	r := &Report{}
-	clients, err := s.Store.ListClients()
+	students, err := s.Store.ListStudents()
 	if err != nil {
 		return nil, err
 	}
-	r.ClientsTotal = len(clients)
+	r.ClientsTotal = len(students)
 	coaches, err := s.Store.ListCoaches()
 	if err != nil {
 		return nil, err
@@ -731,13 +730,13 @@ func nullableInt(n int) *int {
 
 var ErrNotFound = errors.New("not found")
 
-func (s *Services) MustClient(id int64) (*domain.Client, error) {
-	c, err := s.Store.ClientByID(id)
+func (s *Services) MustStudent(id int64) (*domain.Student, error) {
+	c, err := s.Store.StudentByID(id)
 	if err != nil {
 		return nil, err
 	}
 	if c == nil {
-		return nil, fmt.Errorf("%w: client %d", ErrNotFound, id)
+		return nil, fmt.Errorf("%w: student %d", ErrNotFound, id)
 	}
 	return c, nil
 }
@@ -796,17 +795,17 @@ func (s *Services) IsCoachSubscriptionActive(coachID int64) bool {
 
 // ---------- Parent features ----------
 
-func (s *Services) FindChildByBirthDate(fullName, birthDate string) (*domain.Client, error) {
-	return s.Store.ClientByBirthDate(fullName, birthDate)
+func (s *Services) FindChildByBirthDate(fullName, birthDate string) (*domain.Student, error) {
+	return s.Store.StudentByBirthDate(fullName, birthDate)
 }
 
-func (s *Services) LinkParentToChild(parentUserID int64, childClientID int64) error {
-	return s.Store.LinkParentToChild(parentUserID, childClientID)
+func (s *Services) LinkParentToChild(parentUserID int64, studentID int64) error {
+	return s.Store.LinkParentToChild(parentUserID, studentID)
 }
 
-func (s *Services) CreateInviteCode(clientID, createdBy int64) (string, error) {
+func (s *Services) CreateInviteCode(studentID, createdBy int64) (string, error) {
 	expiresAt := time.Now().Add(72 * time.Hour).Format("2006-01-02 15:04:05")
-	return s.Store.CreateInviteCode(clientID, createdBy, expiresAt)
+	return s.Store.CreateInviteCode(studentID, createdBy, expiresAt)
 }
 
 func (s *Services) UseInviteCode(code string) (int64, error) {
@@ -832,14 +831,14 @@ func (s *Services) GetChildLessonStatus(childID int64) (*domain.ChildLessonStatu
 		return nil, err
 	}
 
-	client, err := s.Store.ClientByID(childID)
-	if err != nil || client == nil {
+	student, err := s.Store.StudentByID(childID)
+	if err != nil || student == nil {
 		return nil, fmt.Errorf("%w: child %d", ErrNotFound, childID)
 	}
 
 	status := &domain.ChildLessonStatus{
-		ClientID:       childID,
-		FullName:       client.FullName,
+		StudentID:      childID,
+		FullName:       student.FullName,
 		HasLessonToday: len(entries) > 0,
 	}
 
@@ -920,37 +919,47 @@ func (s *Services) DeleteGroup(id int64) error {
 	return s.Store.DeleteGroup(id)
 }
 
-func (s *Services) AddClientToGroup(groupID, clientID int64, role string) error {
-	return s.Store.AddClientToGroup(groupID, clientID, role)
+func (s *Services) AddStudentToGroup(groupID, studentID int64, role string) error {
+	if err := s.Store.AddStudentToGroup(groupID, studentID, role); err != nil {
+		return err
+	}
+	c, _ := s.Store.StudentByID(studentID)
+	if c != nil && c.CoachID == nil {
+		g, _ := s.Store.GetGroup(groupID)
+		if g != nil && g.CoachID != nil {
+			_ = s.Store.SetStudentCoachID(studentID, *g.CoachID)
+		}
+	}
+	return nil
 }
 
-func (s *Services) RemoveClientFromGroup(groupID, clientID int64) error {
-	return s.Store.RemoveClientFromGroup(groupID, clientID)
+func (s *Services) RemoveStudentFromGroup(groupID, studentID int64) error {
+	return s.Store.RemoveStudentFromGroup(groupID, studentID)
 }
 
-func (s *Services) GetGroupClients(groupID int64) ([]domain.GroupMember, error) {
-	return s.Store.GetGroupClients(groupID)
+func (s *Services) GetGroupStudents(groupID int64) ([]domain.GroupMember, error) {
+	return s.Store.GetGroupStudents(groupID)
 }
 
-func (s *Services) GetClientGroups(clientID int64) ([]domain.Group, error) {
-	return s.Store.GetClientGroups(clientID)
+func (s *Services) GetStudentGroups(studentID int64) ([]domain.Group, error) {
+	return s.Store.GetStudentGroups(studentID)
 }
 
-func (s *Services) ClientsNotInGroup(groupID int64) ([]domain.Client, error) {
-	return s.Store.ClientsNotInGroup(groupID)
+func (s *Services) StudentsNotInGroup(groupID int64) ([]domain.Student, error) {
+	return s.Store.StudentsNotInGroup(groupID)
 }
 
-// ---------- Client Subscriptions ----------
+// ---------- Student Subscriptions ----------
 
-func (s *Services) ClientSubscriptions(clientID int64) ([]domain.ClientSubscription, error) {
-	return s.Store.ClientSubscriptions(clientID)
+func (s *Services) ClientSubscriptions(studentID int64) ([]domain.Subscription, error) {
+	return s.Store.ClientSubscriptions(studentID)
 }
 
-func (s *Services) CreateClientSubscription(sub domain.ClientSubscription) (int64, error) {
+func (s *Services) CreateClientSubscription(sub domain.Subscription) (int64, error) {
 	return s.Store.CreateClientSubscription(sub)
 }
 
-func (s *Services) UpdateClientSubscription(sub domain.ClientSubscription) error {
+func (s *Services) UpdateClientSubscription(sub domain.Subscription) error {
 	return s.Store.UpdateClientSubscription(sub)
 }
 
@@ -1026,7 +1035,7 @@ func (s *Services) GetStatistics(req StatisticsRequest) (*domain.StatisticsRespo
 	if err != nil {
 		return nil, err
 	}
-	resp.Clients = domain.MetricValue{Value: float64(active), Change: float64(newClients - prevNewClients), Label: "Клиенты"}
+	resp.Students = domain.MetricValue{Value: float64(active), Change: float64(newClients - prevNewClients), Label: "Клиенты"}
 
 	// Income
 	income, err := s.Store.SubscriptionIncome(from, to)
@@ -1067,7 +1076,7 @@ func (s *Services) GetStatistics(req StatisticsRequest) (*domain.StatisticsRespo
 		phone := nullStringPtr(d.Phone)
 		endsAt := nullStringPtr(d.EndsAt)
 		items = append(items, domain.DebtorItem{
-			ClientID: d.ClientID,
+			StudentID: d.StudentID,
 			FullName: d.FullName,
 			Phone:    phone,
 			Debt:     d.Debt,
@@ -1089,7 +1098,7 @@ func (s *Services) GetStatistics(req StatisticsRequest) (*domain.StatisticsRespo
 
 	// Quick overview
 	overview := domain.QuickOverview{}
-	overview.NewClients = newClients
+	overview.NewStudents = newClients
 
 	overview.AverageCheck = 0.0
 	if income > 0 && curr > 0 {

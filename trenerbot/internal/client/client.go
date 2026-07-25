@@ -65,9 +65,9 @@ func (c *Client) do(method, path, telegramID string, body any, out any) error {
 }
 
 type TelegramLoginResult struct {
-	User   *domain.User  `json:"user"`
-	Client *domain.Client `json:"client"`
-	Token  string        `json:"token"`
+	User   *domain.User   `json:"user"`
+	Client *domain.Student `json:"client"`
+	Token  string         `json:"token"`
 }
 
 func (c *Client) TelegramLogin(tgID, fullName, phone string, age int, medical, source string) (*TelegramLoginResult, error) {
@@ -87,9 +87,9 @@ func (c *Client) TelegramLogin(tgID, fullName, phone string, age int, medical, s
 }
 
 type MeResult struct {
-	Role     domain.Role    `json:"role"`
-	Client   *domain.Client `json:"client"`
-	Children []domain.Client `json:"children"`
+	Role     domain.Role     `json:"role"`
+	Client   *domain.Student `json:"client"`
+	Children []domain.Student `json:"children"`
 }
 
 func (c *Client) Me(tgID string) (*MeResult, error) {
@@ -171,8 +171,8 @@ func (c *Client) ListClients(tgID string) ([]ClientListItem, error) {
 	return out, nil
 }
 
-func (c *Client) GetClient(tgID string, clientID int64) (*domain.Client, error) {
-	var out domain.Client
+func (c *Client) GetClient(tgID string, clientID int64) (*domain.Student, error) {
+	var out domain.Student
 	if err := c.do(http.MethodGet, fmt.Sprintf("/api/admin/clients/%d", clientID), tgID, nil, &out); err != nil {
 		return nil, err
 	}

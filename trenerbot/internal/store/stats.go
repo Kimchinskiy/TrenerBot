@@ -19,7 +19,7 @@ func (s *Store) TrainingCount(from, to string, coachID int64) (int, error) {
 
 func (s *Store) NewClientsCount(from, to string) (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM clients WHERE registered_at >= ? AND registered_at <= ? AND full_name != ''`,
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM students WHERE registered_at >= ? AND registered_at <= ? AND full_name != ''`,
 		from, to).Scan(&count)
 	if err != nil {
 		return 0, err
@@ -29,7 +29,7 @@ func (s *Store) NewClientsCount(from, to string) (int, error) {
 
 func (s *Store) ActiveClientsCount() (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM (SELECT id FROM clients WHERE status = 'active' AND full_name != '' GROUP BY CASE WHEN user_id IS NULL THEN full_name ELSE CAST(user_id AS TEXT) END)`).Scan(&count)
+	err := s.DB.QueryRow(`SELECT COUNT(*) FROM (SELECT id FROM students WHERE status = 'active' AND full_name != '' GROUP BY CASE WHEN user_id IS NULL THEN full_name ELSE CAST(user_id AS TEXT) END)`).Scan(&count)
 	if err != nil {
 		return 0, err
 	}
@@ -122,17 +122,17 @@ func (s *Store) AvgGroupSize() (float64, error) {
 }
 
 func (s *Store) DebtorClients() ([]struct {
-	ClientID int64
-	FullName string
-	Phone    sql.NullString
-	Debt     float64
-	EndsAt   sql.NullString
+	StudentID int64
+	FullName  string
+	Phone     sql.NullString
+	Debt      float64
+	EndsAt    sql.NullString
 }, error) {
 	rows, err := s.DB.Query(`
 		SELECT c.id, c.full_name, c.phone,
 			COALESCE(s.price, 0),
 			s.ends_at
-		FROM clients c
+		FROM students c
 		LEFT JOIN (
 			SELECT client_id, id, price, ends_at
 			FROM subscriptions
@@ -148,21 +148,21 @@ func (s *Store) DebtorClients() ([]struct {
 	defer rows.Close()
 
 	var items []struct {
-		ClientID int64
-		FullName string
-		Phone    sql.NullString
-		Debt     float64
-		EndsAt   sql.NullString
+		StudentID int64
+		FullName  string
+		Phone     sql.NullString
+		Debt      float64
+		EndsAt    sql.NullString
 	}
 	for rows.Next() {
 		var it struct {
-			ClientID int64
-			FullName string
-			Phone    sql.NullString
-			Debt     float64
-			EndsAt   sql.NullString
+			StudentID int64
+			FullName  string
+			Phone     sql.NullString
+			Debt      float64
+			EndsAt    sql.NullString
 		}
-		if err := rows.Scan(&it.ClientID, &it.FullName, &it.Phone, &it.Debt, &it.EndsAt); err != nil {
+		if err := rows.Scan(&it.StudentID, &it.FullName, &it.Phone, &it.Debt, &it.EndsAt); err != nil {
 			return nil, err
 		}
 		items = append(items, it)

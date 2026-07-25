@@ -236,8 +236,8 @@ func studentSubscriptionHandler(svc *service.Services, w http.ResponseWriter, r 
 		writeError(w, http.StatusNotFound, "student not found")
 		return
 	}
-	if student.ClientID != nil {
-		subs, _ := svc.ClientSubscriptions(*student.ClientID)
+	if student != nil {
+		subs, _ := svc.ClientSubscriptions(student.ID)
 		if len(subs) > 0 {
 			sub := subs[0]
 			writeJSON(w, http.StatusOK, map[string]any{
@@ -270,7 +270,7 @@ func groupStudentsHandler(svc *service.Services, w http.ResponseWriter, r *http.
 		writeError(w, http.StatusBadRequest, "invalid id")
 		return
 	}
-	members, err := svc.GetGroupClients(groupID)
+	members, err := svc.GetGroupStudents(groupID)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return

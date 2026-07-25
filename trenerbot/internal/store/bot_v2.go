@@ -7,56 +7,28 @@ import (
 
 // ---------- Students ----------
 
-func (s *Store) CreateStudent(st domain.Student) (int64, error) {
-	res, err := s.DB.Exec(`INSERT INTO students(full_name, birth_date, age, level, phone, additional_info, status, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-		st.FullName, st.BirthDate, st.Age, st.Level, st.Phone, st.AdditionalInfo, st.Status, st.ClientID)
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
-}
-
-func (s *Store) StudentByID(id int64) (*domain.Student, error) {
-	row := s.DB.QueryRow(`SELECT id, full_name, birth_date, age, level, phone, additional_info, status, client_id, created_at, updated_at FROM students WHERE id = ?`, id)
-	return scanStudent(row)
-}
-
 func (s *Store) StudentsByUserID(userID int64) ([]domain.Student, error) {
-	rows, err := s.DB.Query(`SELECT s.id, s.full_name, s.birth_date, s.age, s.level, s.phone, s.additional_info, s.status, s.client_id, s.created_at, s.updated_at FROM students s JOIN relationships r ON r.student_id = s.id WHERE r.user_id = ? AND s.status = 'active' ORDER BY s.full_name`, userID)
+	rows, err := s.DB.Query(`SELECT s.id, s.user_id, s.full_name, s.photo, s.birth_date, s.age, s.phone, s.telegram, s.whatsapp,
+		s.email, s.level, s.additional_info, s.medical_limits, s.note, s.status, s.registered_at, s.source, s.bot_access, s.coach_id, s.created_at, s.updated_at
+		FROM students s JOIN relationships r ON r.student_id = s.id WHERE r.user_id = ? AND s.status = 'active' ORDER BY s.full_name`, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var students []domain.Student
 	for rows.Next() {
-		st, err := scanStudent(rows)
-		if err != nil {
+		var st domain.Student
+		var photo, birth, phone, tg, wa, email, med, note, reg, src, level, addInfo, updatedAt, coachID sql.NullString
+		var age sql.NullInt64
+		var botAccess sql.NullString
+		if err := rows.Scan(&st.ID, &st.UserID, &st.FullName, &photo, &birth, &age, &phone, &tg, &wa,
+			&email, &level, &addInfo, &med, &note, &st.Status, &reg, &src, &botAccess, &coachID, &st.CreatedAt, &updatedAt); err != nil {
 			return nil, err
 		}
-		students = append(students, *st)
+		scanStudentFields(&st, photo, birth, phone, tg, wa, email, level, addInfo, med, note, reg, src, botAccess, coachID, updatedAt, age)
+		students = append(students, st)
 	}
 	return students, rows.Err()
-}
-
-func scanStudent(row interface{ Scan(...any) error }) (*domain.Student, error) {
-	var st domain.Student
-	var birthDate, phone, addInfo, updatedAt sql.NullString
-	var age sql.NullInt64
-	var clientID sql.NullInt64
-	err := row.Scan(&st.ID, &st.FullName, &birthDate, &age, &st.Level, &phone, &addInfo, &st.Status, &clientID, &st.CreatedAt, &updatedAt)
-	if err != nil {
-		return nil, err
-	}
-	st.BirthDate = nullStr(birthDate)
-	st.Age = nullInt(age)
-	st.Phone = nullStr(phone)
-	st.AdditionalInfo = nullStr(addInfo)
-	st.ClientID = nullInt64(clientID)
-	if updatedAt.Valid {
-		str := updatedAt.String
-		st.UpdatedAt = &str
-	}
-	return &st, nil
 }
 
 // ---------- Relationships ----------

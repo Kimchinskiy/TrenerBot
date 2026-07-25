@@ -104,9 +104,9 @@ func (s *Services) RegisterByPhone(phoneRaw, password, firstName, lastName strin
 	if err != nil {
 		return nil, err
 	}
-	// Create the linked client profile (mirrors TelegramLogin behaviour).
+	// Create the linked student profile (mirrors TelegramLogin behaviour).
 	full := strings.TrimSpace(firstName + " " + lastName)
-	_, _ = s.Store.CreateClient(domain.Client{
+	_, _ = s.Store.CreateStudentFull(domain.Student{
 		UserID:   &uid,
 		FullName: full,
 		Phone:    &phone,
@@ -244,7 +244,7 @@ func (s *Services) LoginWithProvider(p ProviderProfile, currentUserID int64) (*A
 		return nil, err
 	}
 	full := strings.TrimSpace(p.FirstName + " " + p.LastName)
-	_, _ = s.Store.CreateClient(domain.Client{
+	_, _ = s.Store.CreateStudentFull(domain.Student{
 		UserID:   &uid,
 		FullName: full,
 		Status:   "active",

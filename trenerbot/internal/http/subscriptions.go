@@ -219,7 +219,7 @@ func saveParentNotifPrefs(svc *service.Services, w http.ResponseWriter, r *http.
 	}
 	pref := domain.ParentNotifPref{
 		ParentUserID: u.ID,
-		ChildID:      body.ChildID,
+		StudentID: body.ChildID,
 	}
 	if body.LessonStart != nil {
 		pref.LessonStart = *body.LessonStart
