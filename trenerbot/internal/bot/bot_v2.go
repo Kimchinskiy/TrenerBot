@@ -573,15 +573,17 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		b.showLeads(chatID, tgID)
 
 	case strings.HasPrefix(action, "approve_lead"):
-		idStr := strings.TrimPrefix(action, "approve_lead:")
-		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-			b.approveLead(chatID, tgID, id)
+		if len(parts) > 1 {
+			if id, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				b.approveLead(chatID, tgID, id)
+			}
 		}
 
 	case strings.HasPrefix(action, "reject_lead"):
-		idStr := strings.TrimPrefix(action, "reject_lead:")
-		if id, err := strconv.ParseInt(idStr, 10, 64); err == nil {
-			b.rejectLead(chatID, tgID, id)
+		if len(parts) > 1 {
+			if id, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
+				b.rejectLead(chatID, tgID, id)
+			}
 		}
 
 	case strings.HasPrefix(action, "schedule"):
