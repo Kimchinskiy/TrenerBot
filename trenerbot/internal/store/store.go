@@ -347,7 +347,7 @@ func (s *Store) UpdateClient(c domain.Client) error {
 }
 
 func (s *Store) ListClients() ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT id, user_id, full_name, status, bot_access, subscription_ends_at FROM clients WHERE full_name != '' AND full_name IS NOT NULL AND id IN (SELECT MIN(id) FROM clients WHERE full_name != '' AND full_name IS NOT NULL GROUP BY CASE WHEN user_id IS NULL THEN full_name ELSE CAST(user_id AS TEXT) END) ORDER BY full_name`)
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.status, c.bot_access, c.subscription_ends_at FROM clients c WHERE c.full_name != '' AND c.full_name IS NOT NULL AND (c.user_id IS NULL OR c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) AND c.id IN (SELECT MIN(c2.id) FROM clients c2 WHERE c2.full_name != '' AND c2.full_name IS NOT NULL GROUP BY CASE WHEN c2.user_id IS NULL THEN c2.full_name ELSE CAST(c2.user_id AS TEXT) END) ORDER BY c.full_name`)
 	if err != nil {
 		return nil, err
 	}
@@ -1417,7 +1417,7 @@ func (s *Store) GetClientGroups(clientID int64) ([]domain.Group, error) {
 }
 
 func (s *Store) ClientsNotInGroup(groupID int64) ([]domain.Client, error) {
-	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.age, c.phone, c.status FROM clients c WHERE c.id NOT IN (SELECT gm.client_id FROM group_members gm WHERE gm.group_id = ?) AND c.status = 'active' ORDER BY c.full_name`, groupID)
+	rows, err := s.DB.Query(`SELECT c.id, c.user_id, c.full_name, c.age, c.phone, c.status FROM clients c WHERE c.id NOT IN (SELECT gm.client_id FROM group_members gm WHERE gm.group_id = ?) AND c.status = 'active' AND (c.user_id IS NULL OR c.user_id NOT IN (SELECT id FROM users WHERE role IN ('admin', 'coach'))) ORDER BY c.full_name`, groupID)
 	if err != nil {
 		return nil, err
 	}
