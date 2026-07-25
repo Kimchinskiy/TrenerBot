@@ -233,7 +233,7 @@ export default function Profile() {
               <>
                 <MenuItem icon={Users} label="Мои клиенты" onClick={() => router.push('/dashboard/clients')} />
                 <MenuItem icon={Calendar} label="Мой график" onClick={() => router.push('/dashboard/schedule')} />
-                <MenuItem icon={BarChart3} label="Статистика" onClick={() => showDev('Статистика')} />
+                <MenuItem icon={BarChart3} label="Статистика" onClick={() => router.push('/dashboard/statistics')} />
                 <MenuItem icon={Bell} label="Оповестить клиентов" onClick={() => router.push('/dashboard/notifications')} />
               </>
             )}

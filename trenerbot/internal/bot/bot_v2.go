@@ -184,12 +184,14 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 // ---------- /start ----------
 
 func (b *Bot) cmdStart(chatID int64, tgID string, from *tgbotapi.User) {
-	_, _ = b.c.TelegramLogin(tgID, "", "", 0, "", "telegram_bot")
+	if _, err := b.c.TelegramLogin(tgID, "", "", 0, "", "telegram_bot"); err != nil {
+		slog.Error("telegram_login", "err", err)
+	}
 
 	_, err := b.c.Me(tgID)
 	if err != nil {
 		slog.Error("me", "err", err)
-		b.send(chatID, "Ошибка получения профиля. Попробуйте позже.")
+		b.send(chatID, fmt.Sprintf("Ошибка: %s", err))
 		return
 	}
 
@@ -235,7 +237,7 @@ func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 		b.sendKB(chatID, "Кого хотите записать?", kb)
 
 	case rsTarget:
-		if text == "" {
+		if text == "" && st.regType == "" {
 			return
 		}
 		if st.regType == "child" {
@@ -264,7 +266,9 @@ func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 		b.sendKB(chatID, "Выберите уровень подготовки:", kb)
 
 	case rsLevel:
-		st.level = text
+		if text != "" {
+			st.level = text
+		}
 		st.step = rsPhone
 		b.send(chatID, "Введите номер телефона:")
 
@@ -297,7 +301,7 @@ func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 		_, err := b.c.CreateLead(tgID, st.fullName, phonePtr, targetName, targetAge, level, st.regType)
 		if err != nil {
 			slog.Error("create lead", "err", err)
-			b.send(chatID, "❌ Ошибка при отправке заявки. Попробуйте позже или обратитесь к тренеру.")
+			b.send(chatID, fmt.Sprintf("❌ Ошибка: %s", err))
 			return
 		}
 

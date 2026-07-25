@@ -219,7 +219,7 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
                 <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
               </a>
             )}
-            <div className="flex items-center gap-3 p-4">
+            <div className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
                 <MessageCircle className="h-4 w-4 text-primary" />
               </div>
@@ -229,6 +229,7 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
                   {client.bot_access ? 'Подключён' : 'Не подключён'}
                 </p>
               </div>
+              <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
             </div>
           </Card>
         </section>
