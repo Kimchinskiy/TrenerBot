@@ -90,10 +90,6 @@ func New(cfg *config.Config) (*Bot, error) {
 func (b *Bot) Start() error {
 	slog.Info("bot started", "user", b.api.Self.UserName, "mode", b.cfg.BotMode)
 
-	if b.cfg.WebAppURL != "" {
-		b.setWebAppMenuButton()
-	}
-
 	go b.runNotifier()
 
 	if b.cfg.BotMode == "webhook" {
@@ -323,27 +319,14 @@ func (b *Bot) showMenu(chatID int64, tgID string) {
 			tgbotapi.NewInlineKeyboardButtonData("📅 Моё расписание", "schedule"),
 			tgbotapi.NewInlineKeyboardButtonData("📥 Заявки", "leads"),
 		))
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("✅ Отметить посещаемость", "att_menu"),
-			tgbotapi.NewInlineKeyboardButtonData("📢 Уведомить", "broadcast"),
-		))
 	default:
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("📅 Расписание", "schedule"),
 			tgbotapi.NewInlineKeyboardButtonData("🎫 Абонемент", "subscription"),
 		))
 		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonData("📊 Прогресс", "progress"),
 			tgbotapi.NewInlineKeyboardButtonData("💬 Связаться с тренером", "contact"),
-		))
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
 			tgbotapi.NewInlineKeyboardButtonData("👤 Профиль", "profile"),
-		))
-	}
-
-	if b.cfg.WebAppURL != "" {
-		rows = append(rows, tgbotapi.NewInlineKeyboardRow(
-			tgbotapi.NewInlineKeyboardButtonURL("📲 Открыть приложение", b.cfg.WebAppURL),
 		))
 	}
 
@@ -380,8 +363,6 @@ func (b *Bot) handleStudentAction(chatID int64, tgID string, studentID int64, ac
 		b.showStudentSchedule(chatID, tgID, studentID)
 	case "subscription":
 		b.showStudentSubscription(chatID, tgID, studentID)
-	case "progress":
-		b.send(chatID, "📊 Раздел в разработке. Скоро здесь будет прогресс ученика.")
 	case "profile":
 		b.showProfile(chatID, tgID)
 	}
@@ -557,9 +538,6 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 	case action == "subscription":
 		b.selectStudent(chatID, tgID, "subscription")
 
-	case action == "progress":
-		b.selectStudent(chatID, tgID, "progress")
-
 	case action == "profile":
 		b.showProfile(chatID, tgID)
 
@@ -599,19 +577,6 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 				b.showStudentSubscription(chatID, tgID, sid)
 			}
 		}
-
-	case strings.HasPrefix(action, "progress"):
-		if len(parts) > 1 {
-			if sid, err := strconv.ParseInt(parts[1], 10, 64); err == nil {
-				b.handleStudentAction(chatID, tgID, sid, "progress")
-			}
-		}
-
-	case action == "broadcast":
-		b.send(chatID, "📢 Отправка уведомлений доступна на сайте.")
-
-	case action == "att_menu":
-		b.send(chatID, "✅ Отметка посещаемости доступна на сайте.")
 
 	default:
 		slog.Debug("unhandled callback", "data", data)
