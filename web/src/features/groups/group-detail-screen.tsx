@@ -108,33 +108,38 @@ export default function GroupDetailScreen({ params }: { params: { id: string } }
         )}
 
         {/* Group info */}
-        <Card className="p-5">
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-              <Users className="h-5 w-5 text-primary" />
+        <Card className="p-5 border-border/50 bg-card shadow-card flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0 border border-primary/15 shadow-sm">
+              <Users className="h-6 w-6" />
             </div>
             <div className="flex-1 min-w-0">
-              <h3 className="text-base font-bold text-foreground">{group.name || 'Без названия'}</h3>
-              <p className="text-sm text-muted-foreground">{group.member_count ?? 0} учеников</p>
+              <h3 className="text-lg font-bold text-foreground truncate">{group.name || 'Без названия'}</h3>
+              <p className="text-xs text-muted-foreground">{group.member_count ?? 0} учеников в группе</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-3 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40 text-xs">
             {group.schedule && (
-              <div className="flex items-center gap-1.5">
-                <Calendar className="h-4 w-4" />
-                <span>{group.schedule}</span>
-              </div>
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-muted/70 px-3 py-1.5 font-semibold text-foreground">
+                <Calendar className="h-4 w-4 text-primary" />
+                {group.schedule}
+              </span>
             )}
             {group.price && (
-              <span className="font-semibold text-foreground">{group.price} ₽</span>
+              <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-3 py-1.5 font-bold text-emerald-700 dark:text-emerald-400">
+                {group.price.toLocaleString('ru-RU')} ₽ / мес
+              </span>
             )}
             {group.max_members && (
-              <span className="text-muted-foreground">
+              <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary/10 px-3 py-1.5 font-semibold text-primary">
+                <Users className="h-4 w-4" />
                 {group.member_count}/{group.max_members} мест
               </span>
             )}
             {group.location && (
-              <span className="text-muted-foreground">📍 {group.location}</span>
+              <span className="inline-flex items-center gap-1 rounded-xl bg-muted/70 px-3 py-1.5 text-muted-foreground font-medium">
+                📍 {group.location}
+              </span>
             )}
           </div>
         </Card>

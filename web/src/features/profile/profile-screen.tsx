@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { WaveDivider } from '@/components/ui/wave-divider'
 import type { Client } from '@/lib/types'
-import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown } from 'lucide-react'
+import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown, Palette } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
 import { logout } from '@/lib/auth'
 import { useState } from 'react'
+import { ThemeSelector, ThemeToggle } from '@/components/theme-toggle'
 
 function ClientCard({ c }: { c: Client }) {
   const isActive = c.status === 'active'
@@ -155,7 +156,7 @@ function MenuItem({ icon: Icon, label, onClick, variant }: { icon: React.Element
       className={`flex items-center gap-3.5 w-full rounded-2xl p-4 transition-all duration-200 active:scale-[0.99] ${
         variant === 'danger'
           ? 'bg-destructive/5 text-destructive hover:bg-destructive/10'
-          : 'bg-white shadow-card border border-border/30 hover:shadow-elevated text-foreground'
+          : 'bg-card shadow-card border border-border/30 hover:shadow-elevated text-foreground'
       }`}
     >
       <div className={`flex h-9 w-9 items-center justify-center rounded-xl shrink-0 ${
@@ -188,7 +189,7 @@ export default function Profile() {
     router.replace('/login')
   }
 
-  const firstName = data?.client?.full_name?.split(' ')[0] || data?.role === 'parent' ? 'Родитель' : 'Тренер'
+  const firstName = data?.client?.full_name?.split(' ')[0] || (data?.role === 'parent' ? 'Родитель' : 'Тренер')
   const roleLabel = data?.role === 'coach' ? 'Тренер' : data?.role === 'admin' ? 'Администратор' : data?.role === 'parent' ? 'Родитель' : 'Клиент'
 
   return (
@@ -203,7 +204,7 @@ export default function Profile() {
         <div className="px-5 flex flex-col gap-5">
           {/* Profile header */}
           <div className="flex flex-col items-center">
-            <Avatar className="h-20 w-20 border-4 border-white shadow-elevated mb-3">
+            <Avatar className="h-20 w-20 border-4 border-card shadow-elevated mb-3">
               <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
                 {firstName.charAt(0)}
               </AvatarFallback>
@@ -240,6 +241,20 @@ export default function Profile() {
             <MenuItem icon={Settings} label="Настройки" onClick={() => showDev('Настройки')} />
             <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => showDev('Поддержка')} />
           </div>
+
+          {/* Theme Switcher Card */}
+          <Card className="p-4 border-border/50 bg-card">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary shrink-0">
+                <Palette className="h-4.5 w-4.5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-foreground">Тема оформления</h3>
+                <p className="text-xs text-muted-foreground">Выберите внешний вид приложения</p>
+              </div>
+            </div>
+            <ThemeSelector />
+          </Card>
 
           {/* Logout */}
           <MenuItem icon={LogOut} label="Выйти из аккаунта" onClick={handleLogout} variant="danger" />

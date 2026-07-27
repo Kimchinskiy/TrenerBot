@@ -19,7 +19,7 @@ function LessonRow({ entry }: { entry: ScheduleEntry }) {
     <div className={`flex items-center gap-3 rounded-2xl p-3.5 transition-all duration-200 ${
       isCanceled
         ? 'bg-destructive/5 border border-destructive/20 opacity-75'
-        : 'bg-white shadow-card border border-border/30'
+        : 'bg-card shadow-card border border-border/30'
     }`}>
       <Avatar className="h-10 w-10 border border-border/50 shadow-sm shrink-0">
         <AvatarFallback className={`text-xs font-bold uppercase ${

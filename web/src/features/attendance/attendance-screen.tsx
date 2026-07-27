@@ -140,7 +140,7 @@ export default function AttendanceScreen() {
               {clients.map((c) => (
                 <div
                   key={c.client_id}
-                  className="flex items-center gap-3.5 rounded-2xl bg-white p-4 shadow-card border border-border/30"
+                  className="flex items-center gap-3.5 rounded-2xl bg-card p-4 shadow-card border border-border/30"
                 >
                   <Avatar className="h-10 w-10 border border-border/50 shadow-sm shrink-0">
                     <AvatarFallback className="bg-primary/10 text-primary font-bold text-xs uppercase">
@@ -162,7 +162,7 @@ export default function AttendanceScreen() {
       </div>
 
       {/* Bottom action */}
-      <div className="fixed bottom-[96px] left-0 right-0 z-40 border-t border-border/50 bg-white/95 backdrop-blur-md px-5 pt-4 pb-5">
+      <div className="fixed bottom-[96px] left-0 right-0 z-40 border-t border-border/50 bg-card/95 backdrop-blur-md px-5 pt-4 pb-5">
         <div className="w-full max-w-md">
           {successMsg && (
             <div className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold text-success">

@@ -6,7 +6,7 @@ import { useGroups, useCreateGroup, useUpdateGroup, useDeleteGroup } from '@/lib
 import { ScreenHeader, Spinner, ErrorBox, Empty } from '@/components/ui/screen'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Plus, Edit3, Trash2, Users, X, Check } from 'lucide-react'
+import { Plus, Edit3, Trash2, Users, X, Check, Calendar, ChevronRight } from 'lucide-react'
 import type { Group } from '@/lib/types'
 
 function GroupCard({
@@ -21,38 +21,63 @@ function GroupCard({
   onOpen: (g: Group) => void
 }) {
   return (
-    <Card className="flex items-center gap-4 cursor-pointer transition-colors hover:bg-muted/20" onClick={() => onOpen(group)}>
-      <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-        <Users className="h-5 w-5 text-primary" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <h3 className="text-sm font-bold text-foreground truncate">{group.name || 'Без названия'}</h3>
-        <div className="flex items-center gap-2 mt-0.5">
-          {group.schedule && (
-            <span className="text-xs text-muted-foreground">{group.schedule}</span>
-          )}
-          <span className="text-xs text-muted-foreground">· {group.member_count ?? 0} учеников</span>
-          {group.max_members && (
-            <span className="text-xs text-muted-foreground">/ {group.max_members}</span>
-          )}
+    <Card
+      className="p-4 cursor-pointer transition-all hover:shadow-elevated border-border/50 bg-card active:scale-[0.99] flex flex-col gap-3"
+      onClick={() => onOpen(group)}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-primary/10 text-primary shrink-0 shadow-sm border border-primary/15">
+            <Users className="h-5.5 w-5.5" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-base font-bold text-foreground truncate">{group.name || 'Без названия'}</h3>
+            {group.location && (
+              <p className="text-xs text-muted-foreground truncate mt-0.5 flex items-center gap-1">
+                <span>📍</span> {group.location}
+              </p>
+            )}
+          </div>
         </div>
-        {group.price && (
-          <span className="text-xs text-muted-foreground mt-0.5">{group.price} ₽</span>
-        )}
+
+        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => onEdit(group)}
+            className="rounded-xl p-2 hover:bg-muted/70 text-muted-foreground hover:text-foreground transition-colors"
+            title="Редактировать"
+          >
+            <Edit3 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => onDelete(group)}
+            className="rounded-xl p-2 hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+            title="Удалить"
+          >
+            <Trash2 className="h-4 w-4 text-destructive" />
+          </button>
+          <div className="pl-1 text-muted-foreground/60">
+            <ChevronRight className="h-4 w-4" />
+          </div>
+        </div>
       </div>
-      <div className="flex gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
-        <button
-          onClick={() => onEdit(group)}
-          className="rounded-xl p-2 hover:bg-muted/50 transition-colors"
-        >
-          <Edit3 className="h-4 w-4 text-muted-foreground" />
-        </button>
-        <button
-          onClick={() => onDelete(group)}
-          className="rounded-xl p-2 hover:bg-destructive/10 transition-colors"
-        >
-          <Trash2 className="h-4 w-4 text-destructive" />
-        </button>
+
+      <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border/40">
+        {group.schedule && (
+          <span className="inline-flex items-center gap-1.5 rounded-xl bg-muted/70 px-2.5 py-1 text-xs font-medium text-foreground">
+            <Calendar className="h-3.5 w-3.5 text-primary" />
+            {group.schedule}
+          </span>
+        )}
+        <span className="inline-flex items-center gap-1.5 rounded-xl bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
+          <Users className="h-3.5 w-3.5" />
+          {group.member_count ?? 0}
+          {group.max_members ? ` / ${group.max_members}` : ''} учеников
+        </span>
+        {group.price && (
+          <span className="inline-flex items-center rounded-xl bg-emerald-500/10 px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 ml-auto">
+            {group.price.toLocaleString('ru-RU')} ₽
+          </span>
+        )}
       </div>
     </Card>
   )
