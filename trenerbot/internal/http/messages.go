@@ -16,7 +16,18 @@ func messageCoach(svc *service.Services, w http.ResponseWriter, r *http.Request)
 		writeError(w, http.StatusBadRequest, "text required")
 		return
 	}
-	if err := svc.MessageCoaches(body.From, body.Text); err != nil {
+	fromName := body.From
+	if fromName == "" {
+		if u := UserFrom(r.Context()); u != nil {
+			if u.FirstName != nil {
+				fromName = *u.FirstName
+				if u.LastName != nil && *u.LastName != "" {
+					fromName += " " + *u.LastName
+				}
+			}
+		}
+	}
+	if err := svc.MessageCoaches(fromName, body.Text); err != nil {
 		writeError(w, http.StatusInternalServerError, "internal")
 		return
 	}

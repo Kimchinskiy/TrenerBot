@@ -9,8 +9,14 @@ import (
 
 func (s *Store) TrainingCount(from, to string, coachID int64) (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'done' AND coach_id = ?`,
-		from, to, coachID).Scan(&count)
+	var err error
+	if coachID > 0 {
+		err = s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'done' AND coach_id = ?`,
+			from, to, coachID).Scan(&count)
+	} else {
+		err = s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'done'`,
+			from, to).Scan(&count)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -58,8 +64,14 @@ func (s *Store) AttendanceRate(from, to string) (float64, error) {
 
 func (s *Store) CanceledCount(from, to string, coachID int64) (int, error) {
 	var count int
-	err := s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'canceled' AND coach_id = ?`,
-		from, to, coachID).Scan(&count)
+	var err error
+	if coachID > 0 {
+		err = s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'canceled' AND coach_id = ?`,
+			from, to, coachID).Scan(&count)
+	} else {
+		err = s.DB.QueryRow(`SELECT COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND status = 'canceled'`,
+			from, to).Scan(&count)
+	}
 	if err != nil {
 		return 0, err
 	}
@@ -87,8 +99,14 @@ func (s *Store) IncomeChartData(from, to string) ([]domain.ChartPoint, error) {
 func (s *Store) BusiestDay(from, to string, coachID int64) (string, error) {
 	var day string
 	var cnt int
-	err := s.DB.QueryRow(`SELECT CASE CAST(strftime('%w', date) AS INTEGER) WHEN 0 THEN 'Вс' WHEN 1 THEN 'Пн' WHEN 2 THEN 'Вт' WHEN 3 THEN 'Ср' WHEN 4 THEN 'Чт' WHEN 5 THEN 'Пт' WHEN 6 THEN 'Сб' END, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND coach_id = ? GROUP BY strftime('%w', date) ORDER BY 2 DESC LIMIT 1`,
-		from, to, coachID).Scan(&day, &cnt)
+	var err error
+	if coachID > 0 {
+		err = s.DB.QueryRow(`SELECT CASE CAST(strftime('%w', date) AS INTEGER) WHEN 0 THEN 'Вс' WHEN 1 THEN 'Пн' WHEN 2 THEN 'Вт' WHEN 3 THEN 'Ср' WHEN 4 THEN 'Чт' WHEN 5 THEN 'Пт' WHEN 6 THEN 'Сб' END, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND coach_id = ? GROUP BY strftime('%w', date) ORDER BY 2 DESC LIMIT 1`,
+			from, to, coachID).Scan(&day, &cnt)
+	} else {
+		err = s.DB.QueryRow(`SELECT CASE CAST(strftime('%w', date) AS INTEGER) WHEN 0 THEN 'Вс' WHEN 1 THEN 'Пн' WHEN 2 THEN 'Вт' WHEN 3 THEN 'Ср' WHEN 4 THEN 'Чт' WHEN 5 THEN 'Пт' WHEN 6 THEN 'Сб' END, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? GROUP BY strftime('%w', date) ORDER BY 2 DESC LIMIT 1`,
+			from, to).Scan(&day, &cnt)
+	}
 	if err == sql.ErrNoRows {
 		return "", nil
 	}
@@ -101,8 +119,14 @@ func (s *Store) BusiestDay(from, to string, coachID int64) (string, error) {
 func (s *Store) PopularTime(from, to string, coachID int64) (string, error) {
 	var t string
 	var cnt int
-	err := s.DB.QueryRow(`SELECT time, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND coach_id = ? GROUP BY time ORDER BY 2 DESC LIMIT 1`,
-		from, to, coachID).Scan(&t, &cnt)
+	var err error
+	if coachID > 0 {
+		err = s.DB.QueryRow(`SELECT time, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? AND coach_id = ? GROUP BY time ORDER BY 2 DESC LIMIT 1`,
+			from, to, coachID).Scan(&t, &cnt)
+	} else {
+		err = s.DB.QueryRow(`SELECT time, COUNT(*) FROM lesson_entries WHERE date >= ? AND date <= ? GROUP BY time ORDER BY 2 DESC LIMIT 1`,
+			from, to).Scan(&t, &cnt)
+	}
 	if err == sql.ErrNoRows {
 		return "", nil
 	}

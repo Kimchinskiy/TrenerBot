@@ -1,7 +1,9 @@
 package service
 
 import (
+	"database/sql"
 	"time"
+
 	"trenerbot/internal/domain"
 )
 
@@ -48,22 +50,32 @@ func (s *Services) ApproveLead(leadID int64, reviewedBy int64) (*domain.Lead, er
 		return lead, nil
 	}
 
-	var userID int64
-	u, err := s.Store.UserByTelegram(lead.TelegramID)
+	tx, err := s.Store.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
-	if u != nil {
-		userID = u.ID
-	} else {
-		uid, err := s.Store.CreateUser(&lead.TelegramID, domain.RoleClient)
+	defer tx.Rollback()
+
+	var userID int64
+	err = tx.QueryRow(`SELECT id FROM users WHERE telegram_id = ?`, lead.TelegramID).Scan(&userID)
+	if err == sql.ErrNoRows {
+		res, err := tx.Exec(`INSERT INTO users(telegram_id, role, updated_at) VALUES (?, ?, datetime('now'))`, lead.TelegramID, string(domain.RoleClient))
+		if err != nil {
+			return nil, err
+		}
+		uid, err := res.LastInsertId()
 		if err != nil {
 			return nil, err
 		}
 		userID = uid
 		if lead.Phone != nil && *lead.Phone != "" {
-			s.Store.UpdateUserProfile(domain.User{ID: uid, Phone: lead.Phone, FirstName: &lead.FullName})
+			_, err = tx.Exec(`UPDATE users SET phone = ?, first_name = ?, updated_at = datetime('now') WHERE id = ?`, lead.Phone, lead.FullName, uid)
+			if err != nil {
+				return nil, err
+			}
 		}
+	} else if err != nil {
+		return nil, err
 	}
 
 	studentName := lead.FullName
@@ -71,40 +83,48 @@ func (s *Services) ApproveLead(leadID int64, reviewedBy int64) (*domain.Lead, er
 	if lead.RegType == "child" && lead.TargetName != nil {
 		studentName = *lead.TargetName
 	}
-	studentID, err := s.Store.CreateStudentFull(domain.Student{
-		UserID:   &userID,
-		FullName: studentName,
-		Age:      studentAge,
-		Level:    lead.TargetLevel,
-		Phone:    lead.Phone,
-		Status:   "active",
-	})
+	res, err := tx.Exec(`INSERT INTO students(user_id, full_name, age, level, phone, status) VALUES (?, ?, ?, ?, ?, 'active')`,
+		userID, studentName, studentAge, lead.TargetLevel, lead.Phone)
 	if err != nil {
 		return nil, err
 	}
+	studentID, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	// FK compatibility
+	_, _ = tx.Exec("INSERT OR IGNORE INTO clients(id) VALUES (?)", studentID)
 
 	relation := domain.RelSelf
 	if lead.RegType == "child" {
 		relation = domain.RelParent
 	}
-	_, err = s.Store.CreateRelationship(domain.Relationship{
-		UserID:    userID,
-		StudentID: studentID,
-		Relation:  relation,
-	})
+	_, err = tx.Exec(`INSERT OR IGNORE INTO relationships(user_id, student_id, relation) VALUES (?, ?, ?)`,
+		userID, studentID, string(relation))
 	if err != nil {
 		return nil, err
 	}
 
-	if err := s.Store.ApproveLead(leadID, userID, studentID, reviewedBy); err != nil {
+	_, err = tx.Exec(`UPDATE leads SET status = 'approved', reviewed_at = datetime('now'), reviewed_by = ?, created_user_id = ?, created_student_id = ? WHERE id = ?`,
+		reviewedBy, userID, studentID, leadID)
+	if err != nil {
 		return nil, err
 	}
 
 	// Link student to coach
-	if co, err := s.Store.CoachByUserID(reviewedBy); err == nil && co != nil {
-		if st, err := s.Store.StudentByUserID(userID); err == nil && st != nil {
-			_ = s.Store.SetStudentCoachID(st.ID, co.ID)
+	var coachID int64
+	err = tx.QueryRow(`SELECT id FROM coaches WHERE user_id = ?`, reviewedBy).Scan(&coachID)
+	if err == nil && coachID > 0 {
+		_, err = tx.Exec(`UPDATE students SET coach_id = ? WHERE id = ?`, coachID, studentID)
+		if err != nil {
+			return nil, err
 		}
+	} else if err != nil && err != sql.ErrNoRows {
+		return nil, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
 	}
 
 	go s.Notify(userID, "lead_approved", map[string]any{

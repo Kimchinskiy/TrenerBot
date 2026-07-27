@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -85,16 +86,21 @@ func RateLimiter(maxRequests int, window time.Duration) func(http.Handler) http.
 		resetTime  time.Time
 	}
 	clients := make(map[string]*client)
+	var mu sync.Mutex
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			ip := r.RemoteAddr
+			if idx := strings.LastIndex(ip, ":"); idx != -1 {
+				ip = ip[:idx]
+			}
 			now := time.Now()
 
+			mu.Lock()
 			// Clean old clients
-			for ip, c := range clients {
+			for k, c := range clients {
 				if now.After(c.resetTime) {
-					delete(clients, ip)
+					delete(clients, k)
 				}
 			}
 
@@ -107,6 +113,7 @@ func RateLimiter(maxRequests int, window time.Duration) func(http.Handler) http.
 
 			// Check if rate limit exceeded
 			if c.count >= maxRequests {
+				mu.Unlock()
 				slog.Warn("rate limit exceeded", "ip", ip, "count", c.count)
 				writeError(w, http.StatusTooManyRequests, "too many requests")
 				return
@@ -114,6 +121,8 @@ func RateLimiter(maxRequests int, window time.Duration) func(http.Handler) http.
 
 			// Increment count
 			c.count++
+			mu.Unlock()
+
 			next.ServeHTTP(w, r)
 		})
 	}

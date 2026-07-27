@@ -1,6 +1,7 @@
 package service
 
 import (
+	"encoding/json"
 	"errors"
 	"regexp"
 	"strings"
@@ -231,30 +232,88 @@ func (s *Services) LoginWithProvider(p ProviderProfile, currentUserID int64) (*A
 	// attacker-controlled identity to a stranger's account.
 
 	// New account for this provider identity.
-	u := domain.User{
-		TelegramID: providerID(p, "telegram"),
-		MaxID:      providerID(p, "max"),
-		FirstName:  nullable(p.FirstName),
-		LastName:   nullable(p.LastName),
-		AvatarURL:  nullable(p.AvatarURL),
-		Role:       domain.RoleClient,
-	}
-	uid, err := s.Store.InsertUser(u)
+	tx, err := s.Store.DB.Begin()
 	if err != nil {
 		return nil, err
 	}
+	defer tx.Rollback()
+
+	var tgIDVal, maxIDVal *string
+	if tg := providerID(p, "telegram"); tg != nil {
+		tgIDVal = tg
+	}
+	if max := providerID(p, "max"); max != nil {
+		maxIDVal = max
+	}
+	var firstNameVal, lastNameVal, avatarURLVal *string
+	if p.FirstName != "" {
+		firstNameVal = &p.FirstName
+	}
+	if p.LastName != "" {
+		lastNameVal = &p.LastName
+	}
+	if p.AvatarURL != "" {
+		avatarURLVal = &p.AvatarURL
+	}
+
+	res, err := tx.Exec(`INSERT INTO users(telegram_id, max_id, first_name, last_name, avatar_url, role, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, datetime('now'))`,
+		tgIDVal, maxIDVal, firstNameVal, lastNameVal, avatarURLVal, string(domain.RoleClient))
+	if err != nil {
+		return nil, err
+	}
+	uid, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
 	full := strings.TrimSpace(p.FirstName + " " + p.LastName)
-	_, _ = s.Store.CreateStudentFull(domain.Student{
-		UserID:   &uid,
-		FullName: full,
-		Status:   "active",
-		Source:   nullable(p.Provider),
-	})
+	var sourceVal *string
+	if p.Provider != "" {
+		sourceVal = &p.Provider
+	}
+
+	resStudent, err := tx.Exec(`INSERT INTO students(user_id, full_name, status, source)
+		VALUES (?, ?, 'active', ?)`,
+		uid, full, sourceVal)
+	if err != nil {
+		return nil, err
+	}
+	studentID, err := resStudent.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+
+	// FK compat
+	_, _ = tx.Exec("INSERT OR IGNORE INTO clients(id) VALUES (?)", studentID)
+
+	// Create 'self' relationship so Model B links them
+	_, err = tx.Exec(`INSERT OR IGNORE INTO relationships(user_id, student_id, relation) VALUES (?, ?, 'self')`, uid, studentID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Enqueue notification for coaches
+	payload, _ := json.Marshal(map[string]any{"user_id": uid, "name": full})
+	coaches, err := s.Store.ListCoaches()
+	if err == nil {
+		for _, co := range coaches {
+			if co.UserID != nil {
+				_, _ = tx.Exec(`INSERT INTO notifications(channel, recipient_user_id, type, payload, send_at, status)
+					VALUES ('telegram', ?, 'new_client', ?, datetime('now'), 'pending')`,
+					*co.UserID, string(payload))
+			}
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
 	created, err := s.Store.UserByID(uid)
 	if err != nil {
 		return nil, err
 	}
-	_ = s.notifyCoaches("new_client", map[string]any{"user_id": uid, "name": full})
 	return s.issueTokens(created)
 }
 

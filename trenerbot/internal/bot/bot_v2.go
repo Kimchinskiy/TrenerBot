@@ -722,6 +722,20 @@ func (b *Bot) renderNotification(n domain.Notification) string {
 		return fmt.Sprintf("⏰ Напоминание: сегодня тренировка в %s", getStr(payload, "time"))
 	case "lesson_canceled":
 		return fmt.Sprintf("❌ Тренировка %s %s отменена", getStr(payload, "date"), getStr(payload, "time"))
+	case "lesson_change":
+		changeType := getStr(payload, "change_type")
+		oldVal := getStr(payload, "old_value")
+		newVal := getStr(payload, "new_value")
+		date := getStr(payload, "date")
+		timeVal := getStr(payload, "time")
+		switch changeType {
+		case "time":
+			return fmt.Sprintf("📅 Изменение времени тренировки %s: новое время %s (было %s)", date, newVal, oldVal)
+		case "location":
+			return fmt.Sprintf("📍 Изменение места тренировки %s в %s: новое место %s (было %s)", date, timeVal, newVal, oldVal)
+		default:
+			return fmt.Sprintf("🔄 Изменение тренировки %s в %s (%s: %s → %s)", date, timeVal, changeType, oldVal, newVal)
+		}
 	case "coach_broadcast":
 		title := getStr(payload, "title")
 		text := getStr(payload, "text")
