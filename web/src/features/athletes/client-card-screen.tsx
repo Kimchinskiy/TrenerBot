@@ -204,35 +204,35 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
         <WaveDivider className="text-primary/5 -my-2" />
 
         {/* Contact */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Контакты</h3>
-          <Card className="py-0 divide-y divide-border/40">
-            {client.phone && (
-              <a href={`tel:${client.phone}`} className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-                  <Phone className="h-4 w-4 text-primary" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-xs text-muted-foreground">Телефон</p>
-                  <p className="text-sm font-semibold text-foreground">{client.phone}</p>
-                </div>
-                <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
-              </a>
-            )}
-            <div className="flex items-center gap-3 p-4 hover:bg-muted/30 transition-colors">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
-                <MessageCircle className="h-4 w-4 text-primary" />
-              </div>
-              <div className="flex-1">
-                <p className="text-xs text-muted-foreground">Telegram</p>
-                <p className="text-sm font-semibold text-foreground">
-                  {client.bot_access ? 'Подключён' : 'Не подключён'}
-                </p>
-              </div>
-              <ArrowRight className="h-4 w-4 text-muted-foreground/50" />
-            </div>
-          </Card>
-        </section>
+<section>
+  <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">Контакты</h3>
+  <Card className="!p-0 overflow-hidden divide-y divide-border/40">
+    {client.phone && (
+      <a href={`tel:${client.phone}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+          <Phone className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs text-muted-foreground">Телефон</p>
+          <p className="text-sm font-semibold text-foreground">{client.phone}</p>
+        </div>
+        <ArrowRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+      </a>
+    )}
+    <div className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 shrink-0">
+        <MessageCircle className="h-4 w-4 text-primary" />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xs text-muted-foreground">Telegram</p>
+        <p className="text-sm font-semibold text-foreground">
+          {client.bot_access ? 'Подключён' : 'Не подключён'}
+        </p>
+      </div>
+      <ArrowRight className="h-4 w-4 text-muted-foreground/50 shrink-0" />
+    </div>
+  </Card>
+</section>
 
         {/* Subscriptions */}
         <section>
