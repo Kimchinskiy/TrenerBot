@@ -1,4 +1,0 @@
-2026/07/24 20:05:03 INFO server listening addr=:8080
-exit status 0xffffffff
-OR server err="listen tcp :8080: bind: Only one usage of each socket address (protocol/network address/port) is normally permitted."
-exit status 1
