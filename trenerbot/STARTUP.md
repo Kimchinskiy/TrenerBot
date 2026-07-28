@@ -41,7 +41,7 @@ Create `web/.env`:
 
 ```env
 NEXT_PUBLIC_API_URL=/api
-NEXT_PUBLIC_TELEGRAM_BOT=HermesKimchiBot
+NEXT_PUBLIC_TELEGRAM_BOT=
 API_BASE_URL=http://localhost:8080
 ```
 

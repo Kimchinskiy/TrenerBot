@@ -132,49 +132,63 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 	}
 	chatID := upd.Message.Chat.ID
 	tgID := strconv.FormatInt(upd.Message.From.ID, 10)
+	text := strings.TrimSpace(upd.Message.Text)
 
-	b.mu.Lock()
-	if st, ok := b.reg[chatID]; ok {
+	// If message is a command (starts with /), cancel any active FSM and execute command
+	if strings.HasPrefix(text, "/") {
+		b.mu.Lock()
+		delete(b.reg, chatID)
+		delete(b.expect, chatID)
+		delete(b.absenceCtx, chatID)
 		b.mu.Unlock()
-		b.collectReg(chatID, tgID, upd.Message.Text, st)
+
+		switch {
+		case strings.HasPrefix(text, "/start"):
+			b.cmdStart(chatID, tgID, upd.Message.From)
+		case strings.HasPrefix(text, "/menu"):
+			b.showMenu(chatID, tgID)
+		case strings.HasPrefix(text, "/schedule"):
+			b.showSchedule(chatID, tgID)
+		case strings.HasPrefix(text, "/role"):
+			b.cmdRole(chatID, strings.Fields(text))
+		default:
+			b.send(chatID, "Используйте кнопки меню или команду /menu")
+		}
 		return
 	}
+
+	b.mu.Lock()
+	st, inReg := b.reg[chatID]
 	exp := b.expect[chatID]
 	absCtx := b.absenceCtx[chatID]
 	b.mu.Unlock()
 
-	if exp == expContact && upd.Message.Text != "" {
+	if inReg {
+		if text == "" {
+			b.send(chatID, "Пожалуйста, отправьте текстовый ответ или воспользуйтесь кнопками под сообщением.")
+			return
+		}
+		b.collectReg(chatID, tgID, text, st)
+		return
+	}
+
+	if exp == expContact && text != "" {
 		b.mu.Lock()
 		b.expect[chatID] = expNothing
 		b.mu.Unlock()
-		b.handleContactMessage(chatID, tgID, upd.Message.Text)
+		b.handleContactMessage(chatID, tgID, text)
 		return
 	}
-	if exp == expAbsenceRsn && absCtx != nil && upd.Message.Text != "" {
+	if exp == expAbsenceRsn && absCtx != nil && text != "" {
 		b.mu.Lock()
 		b.expect[chatID] = expNothing
 		b.absenceCtx[chatID] = nil
 		b.mu.Unlock()
-		b.submitAbsence(chatID, tgID, absCtx, upd.Message.Text)
+		b.submitAbsence(chatID, tgID, absCtx, text)
 		return
 	}
 
-	if upd.Message.Text == "" {
-		return
-	}
-
-	switch {
-	case strings.HasPrefix(upd.Message.Text, "/start"):
-		b.cmdStart(chatID, tgID, upd.Message.From)
-	case strings.HasPrefix(upd.Message.Text, "/menu"):
-		b.showMenu(chatID, tgID)
-	case strings.HasPrefix(upd.Message.Text, "/schedule"):
-		b.showSchedule(chatID, tgID)
-	case strings.HasPrefix(upd.Message.Text, "/role"):
-		b.cmdRole(chatID, strings.Fields(upd.Message.Text))
-	default:
-		b.send(chatID, "Используйте кнопки меню или команду /menu")
-	}
+	b.send(chatID, "Используйте кнопки меню или команду /menu")
 }
 
 // ---------- /start ----------
@@ -216,12 +230,16 @@ func (b *Bot) beginReg(chatID int64) {
 	b.mu.Lock()
 	b.reg[chatID] = &regState{step: rsName}
 	b.mu.Unlock()
-	b.send(chatID, "👋 Добро пожаловать!\n\nВведите ваше ФИО:")
+	b.send(chatID, "👋 **Добро пожаловать в TrenerBot!**\n\nЯ помогу вам быстро записаться на тренировки по плаванию, просматривать расписание, абонементы и получать важные уведомления от тренера.\n\nДавайте пройдем короткую регистрацию.\n\n👤 **Введите ваше ФИО** (Фамилия Имя Отчество):")
 }
 
 func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 	switch st.step {
 	case rsName:
+		if text == "" {
+			b.send(chatID, "Пожалуйста, введите ваше ФИО:")
+			return
+		}
 		st.fullName = text
 		st.step = rsTarget
 		kb := tgbotapi.NewInlineKeyboardMarkup(
@@ -230,26 +248,33 @@ func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 				tgbotapi.NewInlineKeyboardButtonData("👦 Ребенка", "reg_child"),
 			),
 		)
-		b.sendKB(chatID, "Кого хотите записать?", kb)
+		b.sendKB(chatID, "Кого вы хотите записать?", kb)
 
 	case rsTarget:
-		if text == "" && st.regType == "" {
-			return
-		}
-		if st.regType == "child" {
-			st.step = rsChildName
-			b.send(chatID, "Введите имя ребенка:")
-		} else {
-			st.step = rsAge
-			b.send(chatID, "Введите возраст:")
-		}
+		kb := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("🧑 Себя", "reg_self"),
+				tgbotapi.NewInlineKeyboardButtonData("👦 Ребенка", "reg_child"),
+			),
+		)
+		b.sendKB(chatID, "⚠️ Ручной ввод текста не подходит.\nПожалуйста, выберите, кого вы хотите записать, нажав на одну из кнопок ниже:", kb)
+		return
 
 	case rsChildName:
+		if text == "" {
+			b.send(chatID, "Пожалуйста, введите имя ребенка:")
+			return
+		}
 		st.childName = text
 		st.step = rsAge
-		b.send(chatID, "Введите возраст ребенка:")
+		b.send(chatID, "Введите возраст ребенка (числом):")
 
 	case rsAge:
+		ageVal, err := strconv.Atoi(text)
+		if err != nil || ageVal <= 0 || ageVal > 120 {
+			b.send(chatID, "⚠️ Пожалуйста, введите возраст корректным числом (например, 25 или 7):")
+			return
+		}
 		st.age = text
 		st.step = rsLevel
 		kb := tgbotapi.NewInlineKeyboardMarkup(
@@ -262,13 +287,21 @@ func (b *Bot) collectReg(chatID int64, tgID, text string, st *regState) {
 		b.sendKB(chatID, "Выберите уровень подготовки:", kb)
 
 	case rsLevel:
-		if text != "" {
-			st.level = text
-		}
-		st.step = rsPhone
-		b.send(chatID, "Введите номер телефона:")
+		kb := tgbotapi.NewInlineKeyboardMarkup(
+			tgbotapi.NewInlineKeyboardRow(
+				tgbotapi.NewInlineKeyboardButtonData("Начинающий", "reg_lvl_beginner"),
+				tgbotapi.NewInlineKeyboardButtonData("Средний", "reg_lvl_intermediate"),
+				tgbotapi.NewInlineKeyboardButtonData("Продвинутый", "reg_lvl_advanced"),
+			),
+		)
+		b.sendKB(chatID, "⚠️ Ручной ввод текста не подходит.\nПожалуйста, выберите уровень подготовки кнопкой ниже:", kb)
+		return
 
 	case rsPhone:
+		if text == "" {
+			b.send(chatID, "Пожалуйста, введите номер телефона:")
+			return
+		}
 		st.phone = text
 		b.mu.Lock()
 		delete(b.reg, chatID)

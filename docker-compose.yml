@@ -14,6 +14,20 @@ services:
     volumes:
       - ./data:/app/data
 
+  bot:
+    build:
+      context: ./trenerbot
+      dockerfile: Dockerfile
+    container_name: trenerbot-bot
+    command: ["/app/bot"]
+    restart: always
+    environment:
+      - API_BASE_URL=http://backend:8080
+    env_file:
+      - ./trenerbot/.env
+    depends_on:
+      - backend
+
   frontend:
     build:
       context: ./web

@@ -38,11 +38,18 @@ func main() {
 		return
 	}
 
-	// Update the existing admin (by telegram) with phone+password
-	_, err = s.DB.Exec(`UPDATE users SET phone=?, password_hash=?, updated_at=datetime('now') WHERE telegram_id=? AND role='admin'`, phone, hash, "378450978")
+	res, err := s.DB.Exec(`UPDATE users SET phone=?, password_hash=?, updated_at=datetime('now') WHERE (telegram_id=? OR role='admin')`, phone, hash, "378450978")
 	if err != nil {
 		slog.Error("update admin", "err", err)
 		os.Exit(1)
+	}
+	rows, _ := res.RowsAffected()
+	if rows == 0 {
+		_, err = s.DB.Exec(`INSERT INTO users(role, first_name, phone, password_hash, created_at, updated_at) VALUES ('admin', 'Администратор', ?, ?, datetime('now'), datetime('now'))`, phone, hash)
+		if err != nil {
+			slog.Error("insert admin", "err", err)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("Admin ready\nPhone: %s\nPassword: %s\n", phone, password)

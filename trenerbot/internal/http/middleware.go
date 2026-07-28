@@ -24,10 +24,9 @@ func AuthMiddleware(svc *service.Services, cfg *config.Config) func(http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Add security headers
 			w.Header().Set("X-Content-Type-Options", "nosniff")
-			w.Header().Set("X-Frame-Options", "DENY")
 			w.Header().Set("X-XSS-Protection", "1; mode=block")
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
-			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:;")
+			w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://telegram.org https://oauth.telegram.org; frame-src 'self' https://oauth.telegram.org https://telegram.org; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:;")
 
 			svcToken := r.Header.Get("X-Service-Token")
 			if svcToken != "" && svcToken == cfg.ServiceToken {
@@ -189,157 +188,158 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
-	// Registration is open: only the service token is required (the user is created here).
-	r.Post("/api/auth/telegram", serviceTokenOnly(cfg, func(w http.ResponseWriter, r *http.Request) {
-		authTelegram(svc, w, r)
-	}))
-
-	// ---- Website authentication (primary product). Public endpoints. ----
-	// optionalAuth lets provider logins also act as "link to my account" when a token is sent.
-	r.Group(func(r chi.Router) {
-		r.Use(optionalAuth(svc))
-		r.Post("/api/auth/register", registerByPhone(svc))
-		r.Post("/api/auth/login", loginByPhone(svc))
-		r.Post("/api/auth/refresh", refreshTokens(svc))
-		r.Post("/api/auth/logout", logout(svc))
-		r.Post("/api/auth/telegram-widget", telegramWidgetLogin(svc, cfg))
-		r.Post("/api/auth/max", maxLogin(svc, cfg))
-		// Telegram Mini App login: additional method, validated via initData signature.
-		r.Post("/api/auth/telegram-webapp", webAppLogin(svc, cfg))
-	})
-
 	r.Route("/api", func(r chi.Router) {
-		r.Use(AuthMiddleware(svc, cfg))
+		// ---- Public auth endpoints (no authentication required) ----
+		// Service-token telegram auth (bot channel).
+		r.Post("/auth/telegram", serviceTokenOnly(cfg, func(w http.ResponseWriter, r *http.Request) {
+			authTelegram(svc, w, r)
+		}))
 
-		// Auth
-		r.Post("/auth/telegram", func(w http.ResponseWriter, r *http.Request) { authTelegram(svc, w, r) })
+		// Website authentication (primary product). Public endpoints.
+		// optionalAuth lets provider logins also act as "link to my account" when a token is sent.
+		r.Group(func(r chi.Router) {
+			r.Use(optionalAuth(svc))
+			r.Post("/auth/register", registerByPhone(svc))
+			r.Post("/auth/login", loginByPhone(svc))
+			r.Post("/auth/refresh", refreshTokens(svc))
+			r.Post("/auth/logout", logout(svc))
+			r.Post("/auth/telegram-widget", telegramWidgetLogin(svc, cfg))
+			r.Post("/auth/max", maxLogin(svc, cfg))
+			// Telegram Mini App login: additional method, validated via initData signature.
+			r.Post("/auth/telegram-webapp", webAppLogin(svc, cfg))
+		})
 
-		// Current account (single User entity) + login-method management.
-		r.Get("/me", func(w http.ResponseWriter, r *http.Request) { getMe(svc, w, r) })
-		r.Post("/auth/link/telegram", linkTelegramWidget(svc, cfg))
-		r.Post("/auth/set-password", setPassword(svc))
+		// ---- Authenticated endpoints ----
+		r.Group(func(r chi.Router) {
+			r.Use(AuthMiddleware(svc, cfg))
 
-		// Clients
-		r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listStudents))
-		r.Get("/clients/me", func(w http.ResponseWriter, r *http.Request) { clientsMe(svc, w, r) })
-		r.Get("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getClient))
-		r.Put("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, updateClient))
+			// Current account (single User entity) + login-method management.
+			r.Get("/me", func(w http.ResponseWriter, r *http.Request) { getMe(svc, w, r) })
+			r.Post("/auth/link/telegram", linkTelegramWidget(svc, cfg))
+			r.Post("/auth/set-password", setPassword(svc))
 
-		// Coaches
-		r.Get("/coaches", func(w http.ResponseWriter, r *http.Request) { listCoaches(svc, w, r) })
-		r.Post("/coaches", guard(svc, []domain.Role{domain.RoleAdmin}, createCoach))
-		r.Patch("/coaches/{id}/telegram", guard(svc, []domain.Role{domain.RoleAdmin}, bindCoachTelegram))
+			// Clients
+			r.Get("/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listStudents))
+			r.Get("/clients/me", func(w http.ResponseWriter, r *http.Request) { clientsMe(svc, w, r) })
+			r.Get("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getClient))
+			r.Put("/clients/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, updateClient))
 
-		// Lessons
-		r.Get("/lessons", func(w http.ResponseWriter, r *http.Request) { listLessons(svc, w, r) })
-		r.Post("/lessons", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createLesson))
-		r.Get("/lessons/{id}", func(w http.ResponseWriter, r *http.Request) { getLesson(svc, w, r) })
-		r.Patch("/lessons/{id}/status", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, setLessonStatus))
-		r.Get("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listAttendance))
-		r.Post("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleCoach}, markAttendance))
-		r.Post("/lessons/{id}/register", func(w http.ResponseWriter, r *http.Request) { registerClient(svc, w, r) })
+			// Coaches
+			r.Get("/coaches", func(w http.ResponseWriter, r *http.Request) { listCoaches(svc, w, r) })
+			r.Post("/coaches", guard(svc, []domain.Role{domain.RoleAdmin}, createCoach))
+			r.Patch("/coaches/{id}/telegram", guard(svc, []domain.Role{domain.RoleAdmin}, bindCoachTelegram))
 
-		// Schedule (new model — lesson entries per athlete)
-		r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) { scheduleHandler(svc, w, r) })
-		r.Post("/schedule", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createScheduleEntry))
+			// Lessons
+			r.Get("/lessons", func(w http.ResponseWriter, r *http.Request) { listLessons(svc, w, r) })
+			r.Post("/lessons", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createLesson))
+			r.Get("/lessons/{id}", func(w http.ResponseWriter, r *http.Request) { getLesson(svc, w, r) })
+			r.Patch("/lessons/{id}/status", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, setLessonStatus))
+			r.Get("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listAttendance))
+			r.Post("/lessons/{id}/attendance", guard(svc, []domain.Role{domain.RoleCoach}, markAttendance))
+			r.Post("/lessons/{id}/register", func(w http.ResponseWriter, r *http.Request) { registerClient(svc, w, r) })
 
-		// Files
-		r.Post("/files", func(w http.ResponseWriter, r *http.Request) { uploadFile(svc, w, r) })
+			// Schedule (new model — lesson entries per athlete)
+			r.Get("/schedule", func(w http.ResponseWriter, r *http.Request) { scheduleHandler(svc, w, r) })
+			r.Post("/schedule", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createScheduleEntry))
 
-		// Notifications dispatch (bot polls these via service-token)
-		r.Get("/notifications/due", func(w http.ResponseWriter, r *http.Request) { notificationsDue(svc, w, r) })
-		r.Post("/notifications/{id}/result", func(w http.ResponseWriter, r *http.Request) { notificationsResult(svc, w, r) })
+			// Files
+			r.Post("/files", func(w http.ResponseWriter, r *http.Request) { uploadFile(svc, w, r) })
 
-		// Coach broadcast notifications
-		r.Post("/notifications/preview", func(w http.ResponseWriter, r *http.Request) { notificationsPreview(svc, w, r) })
-		r.Post("/notifications/send", func(w http.ResponseWriter, r *http.Request) { notificationsSend(svc, w, r) })
+			// Notifications dispatch (bot polls these via service-token)
+			r.Get("/notifications/due", func(w http.ResponseWriter, r *http.Request) { notificationsDue(svc, w, r) })
+			r.Post("/notifications/{id}/result", func(w http.ResponseWriter, r *http.Request) { notificationsResult(svc, w, r) })
 
-		// Client -> coach contact (ТЗ §4)
-		r.Post("/messages/coach", func(w http.ResponseWriter, r *http.Request) { messageCoach(svc, w, r) })
+			// Coach broadcast notifications
+			r.Post("/notifications/preview", func(w http.ResponseWriter, r *http.Request) { notificationsPreview(svc, w, r) })
+			r.Post("/notifications/send", func(w http.ResponseWriter, r *http.Request) { notificationsSend(svc, w, r) })
 
-		// Reports
-		r.Get("/reports", guard(svc, []domain.Role{domain.RoleAdmin}, getReport))
+			// Client -> coach contact (ТЗ §4)
+			r.Post("/messages/coach", func(w http.ResponseWriter, r *http.Request) { messageCoach(svc, w, r) })
 
-		// Admin panel
-		r.Get("/admin/clients", guard(svc, []domain.Role{domain.RoleAdmin}, adminListClients))
-		r.Post("/admin/clients/grant", guard(svc, []domain.Role{domain.RoleAdmin}, adminGrantBotAccess))
-		r.Post("/admin/clients/revoke", guard(svc, []domain.Role{domain.RoleAdmin}, adminRevokeBotAccess))
+			// Reports
+			r.Get("/reports", guard(svc, []domain.Role{domain.RoleAdmin}, getReport))
 
-		// Waiting List
-		r.Get("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, waitingList))
-		r.Post("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addToWaitingList))
-		r.Delete("/waiting-list/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeFromWaitingList))
+			// Admin panel
+			r.Get("/admin/clients", guard(svc, []domain.Role{domain.RoleAdmin}, adminListClients))
+			r.Post("/admin/clients/grant", guard(svc, []domain.Role{domain.RoleAdmin}, adminGrantBotAccess))
+			r.Post("/admin/clients/revoke", guard(svc, []domain.Role{domain.RoleAdmin}, adminRevokeBotAccess))
 
-		// Invite codes for parent binding
-		r.Post("/coach/invite-code", guard(svc, []domain.Role{domain.RoleCoach}, createInviteCode))
+			// Waiting List
+			r.Get("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, waitingList))
+			r.Post("/waiting-list", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addToWaitingList))
+			r.Delete("/waiting-list/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeFromWaitingList))
 
-		// Lesson notifications
-		r.Post("/lessons/{id}/notify", guard(svc, []domain.Role{domain.RoleCoach}, notifyLessonChange))
+			// Invite codes for parent binding
+			r.Post("/coach/invite-code", guard(svc, []domain.Role{domain.RoleCoach}, createInviteCode))
 
-		// Debtors widget
-		r.Get("/debtors", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, debtorsWidget))
+			// Lesson notifications
+			r.Post("/lessons/{id}/notify", guard(svc, []domain.Role{domain.RoleCoach}, notifyLessonChange))
 
-		// Social media links
-		r.Get("/social-media", func(w http.ResponseWriter, r *http.Request) { socialMediaLinks(svc, w, r) })
-		r.Post("/social-media", func(w http.ResponseWriter, r *http.Request) { saveSocialLinks(svc, w, r) })
+			// Debtors widget
+			r.Get("/debtors", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, debtorsWidget))
 
-		// New client FAQ
-		r.Get("/faq", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, newClientFAQ))
+			// Social media links
+			r.Get("/social-media", func(w http.ResponseWriter, r *http.Request) { socialMediaLinks(svc, w, r) })
+			r.Post("/social-media", func(w http.ResponseWriter, r *http.Request) { saveSocialLinks(svc, w, r) })
 
-		// Daily attendance (date-based)
-		r.Get("/attendance/date/{date}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getDateAttendance))
-		r.Post("/attendance/date", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, saveDateAttendance))
+			// New client FAQ
+			r.Get("/faq", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, newClientFAQ))
 
-		// Wellbeing feedback
-		r.Post("/wellbeing", guard(svc, []domain.Role{domain.RoleClient}, submitWellbeing))
-		r.Get("/wellbeing/{client_id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, wellbeingHistory))
+			// Daily attendance (date-based)
+			r.Get("/attendance/date/{date}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getDateAttendance))
+			r.Post("/attendance/date", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, saveDateAttendance))
 
-		// Coach subscription & onboarding
-		r.Get("/coach/onboarding", func(w http.ResponseWriter, r *http.Request) { getCoachOnboarding(svc, w, r) })
-		r.Post("/coach/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToCoach(svc, w, r) })
-		r.Get("/coach/subscription", func(w http.ResponseWriter, r *http.Request) { getCoachSubscription(svc, w, r) })
-		r.Post("/coach/subscription/trial", func(w http.ResponseWriter, r *http.Request) { startCoachTrial(svc, w, r) })
-		r.Post("/coach/subscription/activate", func(w http.ResponseWriter, r *http.Request) { activateCoachSubscription(svc, w, r) })
+			// Wellbeing feedback
+			r.Post("/wellbeing", guard(svc, []domain.Role{domain.RoleClient}, submitWellbeing))
+			r.Get("/wellbeing/{client_id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach, domain.RoleClient}, wellbeingHistory))
 
-		// Parent features
-		r.Post("/parent/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToParent(svc, w, r) })
-		r.Post("/parent/link", func(w http.ResponseWriter, r *http.Request) { linkChild(svc, w, r) })
-		r.Get("/parent/children/status", func(w http.ResponseWriter, r *http.Request) { getChildrenStatus(svc, w, r) })
-		r.Get("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getParentNotifPrefs(svc, w, r) })
-		r.Post("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveParentNotifPrefs(svc, w, r) })
+			// Coach subscription & onboarding
+			r.Get("/coach/onboarding", func(w http.ResponseWriter, r *http.Request) { getCoachOnboarding(svc, w, r) })
+			r.Post("/coach/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToCoach(svc, w, r) })
+			r.Get("/coach/subscription", func(w http.ResponseWriter, r *http.Request) { getCoachSubscription(svc, w, r) })
+			r.Post("/coach/subscription/trial", func(w http.ResponseWriter, r *http.Request) { startCoachTrial(svc, w, r) })
+			r.Post("/coach/subscription/activate", func(w http.ResponseWriter, r *http.Request) { activateCoachSubscription(svc, w, r) })
 
-		// Groups
-		r.Get("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listGroups))
-		r.Get("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getGroup))
-		r.Post("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createGroup))
-		r.Put("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateGroup))
-		r.Delete("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteGroup))
-		r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
-		r.Get("/groups/{id}/available-clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupAvailableStudents))
-		r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addStudentToGroup))
-		r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeStudentFromGroup))
+			// Parent features
+			r.Post("/parent/upgrade", func(w http.ResponseWriter, r *http.Request) { upgradeToParent(svc, w, r) })
+			r.Post("/parent/link", func(w http.ResponseWriter, r *http.Request) { linkChild(svc, w, r) })
+			r.Get("/parent/children/status", func(w http.ResponseWriter, r *http.Request) { getChildrenStatus(svc, w, r) })
+			r.Get("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getParentNotifPrefs(svc, w, r) })
+			r.Post("/parent/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveParentNotifPrefs(svc, w, r) })
 
-		// Statistics
-		r.Get("/statistics", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, statisticsHandler))
+			// Groups
+			r.Get("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listGroups))
+			r.Get("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, getGroup))
+			r.Post("/groups", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createGroup))
+			r.Put("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateGroup))
+			r.Delete("/groups/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteGroup))
+			r.Get("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupClients))
+			r.Get("/groups/{id}/available-clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupAvailableStudents))
+			r.Post("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, addStudentToGroup))
+			r.Delete("/groups/{id}/clients", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, removeStudentFromGroup))
 
-		// Bot v2: leads, students, trainings
-		r.Post("/leads", func(w http.ResponseWriter, r *http.Request) { createLeadHandler(svc, w, r) })
-		r.Get("/leads", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listLeadsHandler))
-		r.Post("/leads/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, reviewLeadHandler))
-		r.Get("/me/students", func(w http.ResponseWriter, r *http.Request) { myStudentsHandler(svc, w, r) })
-		r.Get("/students/{id}/trainings", func(w http.ResponseWriter, r *http.Request) { studentTrainingsHandler(svc, w, r) })
-		r.Get("/students/{id}/subscription", func(w http.ResponseWriter, r *http.Request) { studentSubscriptionHandler(svc, w, r) })
-		r.Post("/trainings/absence", func(w http.ResponseWriter, r *http.Request) { reportAbsenceHandler(svc, w, r) })
-		r.Get("/groups/{id}/students", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupStudentsHandler))
-		r.Get("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getNotifPrefsHandler(svc, w, r) })
-		r.Post("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveNotifPrefsHandler(svc, w, r) })
+			// Statistics
+			r.Get("/statistics", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, statisticsHandler))
 
-		// Client subscriptions
-		r.Route("/clients/{client_id}/subscriptions", func(r chi.Router) {
-			r.Get("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClientSubscriptions))
-			r.Post("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createClientSubscription))
-			r.Put("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateClientSubscription))
-			r.Delete("/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteClientSubscription))
+			// Bot v2: leads, students, trainings
+			r.Post("/leads", func(w http.ResponseWriter, r *http.Request) { createLeadHandler(svc, w, r) })
+			r.Get("/leads", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listLeadsHandler))
+			r.Post("/leads/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, reviewLeadHandler))
+			r.Get("/me/students", func(w http.ResponseWriter, r *http.Request) { myStudentsHandler(svc, w, r) })
+			r.Get("/students/{id}/trainings", func(w http.ResponseWriter, r *http.Request) { studentTrainingsHandler(svc, w, r) })
+			r.Get("/students/{id}/subscription", func(w http.ResponseWriter, r *http.Request) { studentSubscriptionHandler(svc, w, r) })
+			r.Post("/trainings/absence", func(w http.ResponseWriter, r *http.Request) { reportAbsenceHandler(svc, w, r) })
+			r.Get("/groups/{id}/students", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupStudentsHandler))
+			r.Get("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getNotifPrefsHandler(svc, w, r) })
+			r.Post("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveNotifPrefsHandler(svc, w, r) })
+
+			// Client subscriptions
+			r.Route("/clients/{client_id}/subscriptions", func(r chi.Router) {
+				r.Get("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClientSubscriptions))
+				r.Post("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createClientSubscription))
+				r.Put("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateClientSubscription))
+				r.Delete("/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteClientSubscription))
+			})
 		})
 	})
 
