@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./trenerbot
+      dockerfile: Dockerfile
+    container_name: trenerbot-backend
+    restart: always
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - ./trenerbot/.env
+    volumes:
+      - ./data:/app/data
+
+  frontend:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    container_name: trenerbot-frontend
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    env_file:
+      - ./web/.env
+    depends_on:
+      - backend
