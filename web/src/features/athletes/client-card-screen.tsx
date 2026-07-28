@@ -2,13 +2,203 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useClients, useClientSubscriptions, useCreateClientSubscription, useUpdateClientSubscription, useDeleteClientSubscription } from '@/lib/hooks'
+import {
+  useClients,
+  useClientSubscriptions,
+  useCreateClientSubscription,
+  useUpdateClientSubscription,
+  useDeleteClientSubscription,
+  useSendNotification,
+} from '@/lib/hooks'
 import { ScreenHeader, Card, Spinner, Empty } from '@/components/ui/screen'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { WaveDivider } from '@/components/ui/wave-divider'
-import { Phone, MessageCircle, Calendar, FileText, ArrowRight, Plus, Trash2, Check, CreditCard } from 'lucide-react'
-import type { ClientSubscription } from '@/lib/types'
+import { haptics } from '@/services/telegram'
+import {
+  Phone,
+  MessageCircle,
+  Calendar,
+  FileText,
+  ArrowRight,
+  Plus,
+  Trash2,
+  Check,
+  CreditCard,
+  X,
+  Send,
+  AlertCircle,
+  CheckCircle2,
+} from 'lucide-react'
+import type { ClientSubscription, SendResult } from '@/lib/types'
+
+function SendMessageModal({
+  clientName,
+  clientId,
+  botAccess,
+  onClose,
+}: {
+  clientName: string
+  clientId: number
+  botAccess: boolean
+  onClose: () => void
+}) {
+  const sendNotification = useSendNotification()
+  const [title, setTitle] = useState('Сообщение от тренера')
+  const [text, setText] = useState('')
+  const [sentResult, setSentResult] = useState<{ success: boolean; message: string } | null>(null)
+
+  const handleSend = () => {
+    if (!text.trim()) return
+    setSentResult(null)
+
+    sendNotification.mutate(
+      {
+        filter: 'manual',
+        client_ids: [clientId],
+        title: title.trim() || 'Сообщение от тренера',
+        text: text.trim(),
+      },
+      {
+        onSuccess: (data: SendResult) => {
+          haptics.success()
+          if (data.enqueued > 0) {
+            setSentResult({
+              success: true,
+              message: 'Сообщение успешно отправлено клиенту в Telegram!',
+            })
+            setTimeout(() => {
+              onClose()
+            }, 2000)
+          } else if (data.skipped > 0) {
+            setSentResult({
+              success: false,
+              message: 'Клиент пока не привязал Telegram-бот. Сообщение будет доставлено при первой авторизации.',
+            })
+          } else {
+            setSentResult({
+              success: true,
+              message: 'Сообщение отправлено',
+            })
+          }
+        },
+        onError: (err: any) => {
+          haptics.error()
+          setSentResult({
+            success: false,
+            message: err?.message || 'Не удалось отправить сообщение',
+          })
+        },
+      },
+    )
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <Card className="w-full max-w-lg p-5 shadow-2xl bg-white border border-border rounded-3xl relative flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <MessageCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-foreground">Сообщение клиенту</h3>
+              <p className="text-xs text-muted-foreground">{clientName}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="rounded-xl p-1.5 hover:bg-muted text-muted-foreground transition-colors"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* Telegram Status Badge */}
+        <div
+          className={`flex items-center gap-2 rounded-2xl p-3 text-xs font-semibold ${
+            botAccess
+              ? 'bg-success-light/60 text-success border border-success/20'
+              : 'bg-warning-light/60 text-warning-dark border border-warning/20'
+          }`}
+        >
+          {botAccess ? (
+            <>
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-success" />
+              <span>Telegram подключён (клиент получит уведомление в боте)</span>
+            </>
+          ) : (
+            <>
+              <AlertCircle className="h-4 w-4 shrink-0 text-warning" />
+              <span>Telegram не подключён к аккаунту клиента</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-3">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Тема
+            </label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Заголовок сообщения"
+              className="w-full rounded-2xl border border-border/60 bg-muted/20 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+            />
+          </div>
+
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block">
+              Текст сообщения
+            </label>
+            <textarea
+              rows={4}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder="Введите текст сообщения для клиента..."
+              className="w-full rounded-2xl border border-border/60 bg-muted/20 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+            />
+          </div>
+        </div>
+
+        {sentResult && (
+          <div
+            className={`p-3 rounded-2xl text-xs font-semibold flex items-center gap-2 ${
+              sentResult.success
+                ? 'bg-success-light text-success'
+                : 'bg-destructive/10 text-destructive'
+            }`}
+          >
+            {sentResult.success ? (
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+            ) : (
+              <AlertCircle className="h-4 w-4 shrink-0" />
+            )}
+            <span>{sentResult.message}</span>
+          </div>
+        )}
+
+        <div className="flex gap-2 pt-2">
+          <Button variant="outline" size="default" onClick={onClose} className="flex-1 rounded-2xl">
+            Отмена
+          </Button>
+          <Button
+            variant="gradient"
+            size="default"
+            onClick={handleSend}
+            disabled={sendNotification.isPending || !text.trim()}
+            className="flex-1 rounded-2xl"
+          >
+            <Send className="h-4 w-4 mr-2" />
+            {sendNotification.isPending ? 'Отправка...' : 'Отправить в бот'}
+          </Button>
+        </div>
+      </Card>
+    </div>
+  )
+}
 
 function SubscriptionCard({ sub, onDelete }: { sub: ClientSubscription; onDelete: (id: number) => void }) {
   const typeLabel = sub.type === 'count' ? `${sub.lessons_left} занятий` : sub.type === 'period' ? 'Безлимит' : sub.type
@@ -152,6 +342,7 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
   const { data: subscriptions, isLoading: subsLoading } = useClientSubscriptions(clientId)
   const deleteSub = useDeleteClientSubscription()
   const [showCreate, setShowCreate] = useState(false)
+  const [showMessageModal, setShowMessageModal] = useState(false)
 
   const client = clients?.find((c) => c.id === clientId)
 
@@ -304,11 +495,21 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
         </section>
 
         {/* Message button */}
-        <Button variant="gradient" size="lg">
+        <Button variant="gradient" size="lg" onClick={() => setShowMessageModal(true)}>
           <MessageCircle className="h-5 w-5 mr-2" />
           Написать клиенту
         </Button>
       </div>
+
+      {showMessageModal && (
+        <SendMessageModal
+          clientName={client.full_name}
+          clientId={client.id}
+          botAccess={client.bot_access}
+          onClose={() => setShowMessageModal(false)}
+        />
+      )}
     </div>
   )
 }
+

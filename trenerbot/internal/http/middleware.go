@@ -333,14 +333,14 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Get("/groups/{id}/students", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, groupStudentsHandler))
 		r.Get("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { getNotifPrefsHandler(svc, w, r) })
 		r.Post("/me/notif-prefs", func(w http.ResponseWriter, r *http.Request) { saveNotifPrefsHandler(svc, w, r) })
-	})
 
-	// Client subscriptions
-	r.Route("/clients/{client_id}/subscriptions", func(r chi.Router) {
-		r.Get("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClientSubscriptions))
-		r.Post("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createClientSubscription))
-		r.Put("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateClientSubscription))
-		r.Delete("/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteClientSubscription))
+		// Client subscriptions
+		r.Route("/clients/{client_id}/subscriptions", func(r chi.Router) {
+			r.Get("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, listClientSubscriptions))
+			r.Post("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, createClientSubscription))
+			r.Put("/", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, updateClientSubscription))
+			r.Delete("/{id}", guard(svc, []domain.Role{domain.RoleAdmin, domain.RoleCoach}, deleteClientSubscription))
+		})
 	})
 
 	return r

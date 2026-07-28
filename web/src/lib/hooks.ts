@@ -333,3 +333,20 @@ export function useRejectLead() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   })
 }
+
+// --- Notifications ---
+export function useNotificationsPreview(filter: string, groupId?: number, clientIds?: number[]) {
+  return useQuery({
+    queryKey: ['notifications-preview', filter, groupId, clientIds],
+    queryFn: () => endpoints.notificationsPreview({ filter, group_id: groupId, client_ids: clientIds }),
+    enabled: !!filter && (filter !== 'group' || !!groupId) && (filter !== 'manual' || (!!clientIds && clientIds.length > 0)),
+  })
+}
+
+export function useSendNotification() {
+  return useMutation({
+    mutationFn: (vars: { filter: string; group_id?: number; client_ids?: number[]; title: string; text: string }) =>
+      endpoints.notificationsSend(vars),
+  })
+}
+

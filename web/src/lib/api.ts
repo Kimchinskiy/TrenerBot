@@ -204,6 +204,16 @@ export const endpoints = {
   me: () => request<MeResult>('/clients/me'),
   lessons: (from: string, to: string) => request<Lesson[]>(`/lessons?from=${from}&to=${to}`),
   schedule: (from: string, to: string) => request<ScheduleEntry[]>(`/schedule?from=${from}&to=${to}`),
+  notificationsPreview: (body: { filter: string; group_id?: number; client_ids?: number[] }) =>
+    request<NotificationPreview>('/notifications/preview', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  notificationsSend: (body: { filter: string; group_id?: number; client_ids?: number[]; title: string; text: string }) =>
+    request<SendResult>('/notifications/send', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 
   // Coach
   coachOnboarding: () => request<CoachOnboarding>('/coach/onboarding'),
@@ -292,3 +302,4 @@ export const endpoints = {
       body: JSON.stringify({ date, entries }),
     }),
 }
+

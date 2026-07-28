@@ -2,121 +2,322 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ScreenHeader, Card, Empty } from '@/components/ui/screen'
+import { ScreenHeader, Card, Empty, Spinner } from '@/components/ui/screen'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useClients } from '@/lib/hooks'
-import { api } from '@/lib/api'
+import { useClients, useGroups, useNotificationsPreview, useSendNotification } from '@/lib/hooks'
 import { haptics } from '@/services/telegram'
-import { Send, Bell, MessageCircle, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import {
+  Send,
+  Bell,
+  Users,
+  Calendar,
+  UserCheck,
+  CheckCircle2,
+  AlertCircle,
+  Search,
+  Check,
+} from 'lucide-react'
 
-type Tab = 'all' | 'reminders' | 'system'
+type RecipientFilter = 'all' | 'group' | 'today' | 'tomorrow' | 'manual'
 
 export default function NotificationsScreen() {
   const router = useRouter()
   const { data: clients } = useClients()
-  const [tab, setTab] = useState<Tab>('all')
+  const { data: groups } = useGroups()
+
+  const [filter, setFilter] = useState<RecipientFilter>('all')
+  const [selectedGroupId, setSelectedGroupId] = useState<number | undefined>(undefined)
+  const [selectedClientIds, setSelectedClientIds] = useState<number[]>([])
+
+  const [clientSearch, setClientSearch] = useState('')
+
   const [title, setTitle] = useState('')
   const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
-  const [sent, setSent] = useState(false)
-  const [error, setError] = useState('')
+  const [sentMessage, setSentMessage] = useState<string | null>(null)
+  const [error, setError] = useState<string | null>(null)
 
-  const handleSend = async () => {
-    if (!title.trim() || !text.trim()) return
-    setSending(true)
-    setError('')
-    try {
-      await api.notificationsSend({
-        filter: 'all',
-        title: title.trim(),
-        text: text.trim(),
-      })
-      setSent(true)
-      haptics.success()
-      setTitle('')
-      setText('')
-      setTimeout(() => setSent(false), 3000)
-    } catch {
-      setError('Ошибка отправки')
-      haptics.error()
-    } finally {
-      setSending(false)
+  const { data: previewData, isLoading: isPreviewLoading } = useNotificationsPreview(
+    filter,
+    filter === 'group' ? selectedGroupId : undefined,
+    filter === 'manual' ? selectedClientIds : undefined,
+  )
+
+  const sendNotification = useSendNotification()
+
+  const toggleClientSelection = (id: number) => {
+    setSelectedClientIds((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    )
+  }
+
+  const selectAllFilteredClients = (filteredIds: number[]) => {
+    const allSelected = filteredIds.every((id) => selectedClientIds.includes(id))
+    if (allSelected) {
+      setSelectedClientIds((prev) => prev.filter((id) => !filteredIds.includes(id)))
+    } else {
+      setSelectedClientIds((prev) => Array.from(new Set([...prev, ...filteredIds])))
     }
   }
+
+  const handleSend = () => {
+    if (!title.trim() || !text.trim()) return
+    setError(null)
+    setSentMessage(null)
+
+    sendNotification.mutate(
+      {
+        filter,
+        group_id: filter === 'group' ? selectedGroupId : undefined,
+        client_ids: filter === 'manual' ? selectedClientIds : undefined,
+        title: title.trim(),
+        text: text.trim(),
+      },
+      {
+        onSuccess: (res) => {
+          haptics.success()
+          setSentMessage(`Оповещение успешно отправлено! Поставлено в очередь: ${res.enqueued}, пропущено: ${res.skipped}.`)
+          setTitle('')
+          setText('')
+          setTimeout(() => setSentMessage(null), 5000)
+        },
+        onError: (err: any) => {
+          haptics.error()
+          setError(err?.message || 'Ошибка при отправке оповещения')
+        },
+      },
+    )
+  }
+
+  const filteredClientsList = clients?.filter((c) =>
+    c.full_name.toLowerCase().includes(clientSearch.toLowerCase()),
+  )
+
+  const recipientCount = previewData?.total ?? 0
 
   return (
     <div>
       <ScreenHeader title="Оповещения" onBack={() => router.back()} />
 
       <div className="px-5 flex flex-col gap-5">
-        {/* Tabs */}
-        <div className="flex gap-2">
-          {([
-            { key: 'all', label: 'Все', icon: Bell },
-            { key: 'reminders', label: 'Напоминания', icon: MessageCircle },
-            { key: 'system', label: 'Системные', icon: AlertTriangle },
-          ] as const).map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              onClick={() => setTab(key)}
-              className={`flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold transition-all duration-200 ${
-                tab === key
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-
-        {/* Send form */}
+        {/* Recipient Filter Selection */}
         <section>
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">
-            Отправить оповещение
+            Получатели оповещения
+          </h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[
+              { key: 'all', label: 'Все клиенты', icon: Bell },
+              { key: 'group', label: 'По группе', icon: Users },
+              { key: 'today', label: 'Занимающиеся сегодня', icon: Calendar },
+              { key: 'tomorrow', label: 'Занимающиеся завтра', icon: Calendar },
+              { key: 'manual', label: 'Выбор вручную', icon: UserCheck },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setFilter(key as RecipientFilter)
+                  if (key === 'group' && !selectedGroupId && groups && groups.length > 0) {
+                    setSelectedGroupId(groups[0].id)
+                  }
+                }}
+                className={`flex items-center gap-2 rounded-2xl p-3 text-xs font-semibold transition-all border text-left ${
+                  filter === key
+                    ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                    : 'bg-white text-foreground border-border hover:bg-muted/50'
+                }`}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span className="truncate">{label}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Group Selector Dropdown */}
+        {filter === 'group' && (
+          <section className="animate-in fade-in duration-200">
+            <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1.5 block px-1">
+              Выберите группу
+            </label>
+            <select
+              value={selectedGroupId || ''}
+              onChange={(e) => setSelectedGroupId(Number(e.target.value))}
+              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+            >
+              {groups?.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name || `Группа #${g.id}`} ({g.member_count || 0} уч.)
+                </option>
+              ))}
+            </select>
+          </section>
+        )}
+
+        {/* Manual Client Multi-Selection */}
+        {filter === 'manual' && (
+          <section className="flex flex-col gap-3 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between px-1">
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Выберите клиентов ({selectedClientIds.length})
+              </label>
+              {filteredClientsList && filteredClientsList.length > 0 && (
+                <button
+                  onClick={() => selectAllFilteredClients(filteredClientsList.map((c) => c.id))}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  {filteredClientsList.every((c) => selectedClientIds.includes(c.id))
+                    ? 'Снять все'
+                    : 'Выбрать все'}
+                </button>
+              )}
+            </div>
+
+            <div className="relative">
+              <Search className="absolute left-3.5 top-3 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Поиск по имени клиента..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
+                className="w-full rounded-2xl border border-border/60 bg-white pl-10 pr-4 py-2.5 text-sm"
+              />
+            </div>
+
+            <Card className="max-h-60 overflow-y-auto !p-1 divide-y divide-border/30">
+              {filteredClientsList && filteredClientsList.length > 0 ? (
+                filteredClientsList.map((c) => {
+                  const isSelected = selectedClientIds.includes(c.id)
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => toggleClientSelection(c.id)}
+                      className={`flex items-center justify-between p-3 cursor-pointer rounded-xl transition-colors ${
+                        isSelected ? 'bg-primary/10' : 'hover:bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-foreground">{c.full_name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {c.phone || 'Нет телефона'} {c.bot_access ? '· TG подключён' : ''}
+                        </span>
+                      </div>
+                      <div
+                        className={`flex h-5 w-5 items-center justify-center rounded-lg border transition-colors ${
+                          isSelected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'border-border bg-white'
+                        }`}
+                      >
+                        {isSelected && <Check className="h-3.5 w-3.5" />}
+                      </div>
+                    </div>
+                  )
+                })
+              ) : (
+                <div className="p-4 text-center text-xs text-muted-foreground">
+                  Клиенты не найдены
+                </div>
+              )}
+            </Card>
+          </section>
+        )}
+
+        {/* Recipients Preview Summary */}
+        <section>
+          <Card className="flex items-center justify-between bg-primary/5 border-primary/20">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
+                <Users className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground">Будет отправлено</p>
+                <p className="text-sm font-bold text-foreground">
+                  {isPreviewLoading ? (
+                    'Расчёт получателей...'
+                  ) : (
+                    `${recipientCount} получател${
+                      recipientCount % 10 === 1 && recipientCount % 100 !== 11
+                        ? 'ю'
+                        : recipientCount % 10 >= 2 && recipientCount % 10 <= 4 && (recipientCount % 100 < 10 || recipientCount % 100 >= 20)
+                        ? 'ям'
+                        : 'ям'
+                    }`
+                  )}
+                </p>
+              </div>
+            </div>
+            {previewData?.recipients && previewData.recipients.length > 0 && (
+              <span className="text-xs font-semibold px-2.5 py-1 bg-white rounded-full text-primary border border-primary/20">
+                {previewData.recipients.filter((r) => r.user_id !== null).length} в Telegram
+              </span>
+            )}
+          </Card>
+        </section>
+
+        {/* Message Form */}
+        <section>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">
+            Сообщение
           </h3>
           <Card className="flex flex-col gap-3">
-            <Input
-              placeholder="Заголовок"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-            />
-            <Input
-              placeholder="Текст сообщения"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              className="h-20"
-            />
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
+                Заголовок
+              </label>
+              <Input
+                placeholder="Заголовок оповещения (например: Внимание! Изменение расписания)"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+              />
+            </div>
 
-            {sent && (
-              <div className="flex items-center gap-2 text-sm font-semibold text-success">
-                <CheckCircle2 className="h-4 w-4" />
-                Оповещение отправлено
+            <div>
+              <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1 block">
+                Текст сообщения
+              </label>
+              <textarea
+                rows={4}
+                placeholder="Текст рассылки для клиентов..."
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+              />
+            </div>
+
+            {sentMessage && (
+              <div className="flex items-center gap-2 p-3 rounded-2xl bg-success-light text-success text-xs font-semibold">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                <span>{sentMessage}</span>
               </div>
             )}
+
             {error && (
-              <p className="text-sm font-semibold text-destructive">{error}</p>
+              <div className="flex items-center gap-2 p-3 rounded-2xl bg-destructive/10 text-destructive text-xs font-semibold">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                <span>{error}</span>
+              </div>
             )}
 
             <Button
               onClick={handleSend}
-              disabled={!title.trim() || !text.trim() || sending}
+              disabled={
+                !title.trim() ||
+                !text.trim() ||
+                sendNotification.isPending ||
+                (filter === 'manual' && selectedClientIds.length === 0) ||
+                (filter === 'group' && !selectedGroupId)
+              }
               variant="gradient"
+              size="lg"
+              className="mt-1 rounded-2xl"
             >
               <Send className="h-4 w-4 mr-2" />
-              {sending ? 'Отправка...' : `Отправить ${clients?.length || 0} клиентам`}
+              {sendNotification.isPending
+                ? 'Отправка...'
+                : `Отправить ${recipientCount} получателям`}
             </Button>
           </Card>
-        </section>
-
-        {/* History placeholder */}
-        <section>
-          <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">
-            История отправок
-          </h3>
-          <Empty text="Пока нет отправленных оповещений" />
         </section>
       </div>
     </div>
