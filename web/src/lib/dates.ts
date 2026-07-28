@@ -17,6 +17,7 @@ export function weekRange(base = new Date()): { from: string; to: string } {
 export const WEEKDAYS_RU = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс']
 export const WEEKDAYS_RU_FULL = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
 export const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
+export const MONTHS_RU_NOM = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 
 export function prettyDate(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
@@ -40,3 +41,36 @@ export function weekFromToday(base = new Date()): { from: string; to: string } {
   to.setDate(to.getDate() + daysUntilSunday)
   return { from: isoDate(from), to: isoDate(to) }
 }
+
+export interface CalendarDay {
+  iso: string
+  dayName: string
+  dayNumber: number
+  monthName: string
+  isToday: boolean
+}
+
+export function getWeekDays(base = new Date()): CalendarDay[] {
+  const current = new Date(base)
+  const dayOfWeek = current.getDay() === 0 ? 7 : current.getDay()
+  const monday = new Date(current)
+  monday.setDate(current.getDate() - dayOfWeek + 1)
+
+  const todayIso = isoDate(new Date())
+
+  const days: CalendarDay[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday)
+    d.setDate(monday.getDate() + i)
+    const iso = isoDate(d)
+    days.push({
+      iso,
+      dayName: WEEKDAYS_RU[i],
+      dayNumber: d.getDate(),
+      monthName: MONTHS_RU_NOM[d.getMonth()],
+      isToday: iso === todayIso,
+    })
+  }
+  return days
+}
+

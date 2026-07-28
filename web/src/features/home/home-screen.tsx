@@ -8,6 +8,8 @@ import { SkeletonList } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { Clock, ArrowRight, Bell, CheckCircle, Users, UserPlus } from 'lucide-react'
 import Link from 'next/link'
+import CoachOnboardingModal from '@/components/coach-onboarding-modal'
+import { CoachOnboardingCard } from '@/components/coach-onboarding-card'
 
 function TodayLessons({ entries }: { entries: { time: string; client_name: string; group_name?: string | null; status: string; duration: number }[] }) {
   if (entries.length === 0) {
@@ -126,6 +128,19 @@ export default function HomeScreen() {
   }, [schedule, today])
 
   const firstName = me?.client?.full_name?.split(' ')[0] || (me?.role === 'parent' ? 'Родитель' : 'Тренер')
+  const [showOnboarding, setShowOnboarding] = useState(false)
+
+  useEffect(() => {
+    if (me && (me.role === 'coach' || me.role === 'admin')) {
+      const uId = me.client?.user_id || me.client?.id || 1
+      const userKey = `plavli_coach_onboarding_done_${uId}`
+      const doneUser = localStorage.getItem(userKey)
+      const doneGlobal = localStorage.getItem('plavli_coach_onboarding_done')
+      if (!doneUser && !doneGlobal) {
+        setShowOnboarding(true)
+      }
+    }
+  }, [me])
 
   if (meLoading || schedLoading) {
     return (
@@ -136,8 +151,11 @@ export default function HomeScreen() {
     )
   }
 
+  const coachUserId = me?.client?.user_id || me?.client?.id
+
   return (
     <div className="pb-24">
+      <CoachOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} userId={coachUserId} />
       {/* Header */}
       <div className="px-5 pt-6 pb-2">
         <div className="flex items-center justify-between">
@@ -157,6 +175,11 @@ export default function HomeScreen() {
       </div>
 
       <div className="px-5 flex flex-col gap-5 pt-3">
+        {/* Onboarding Welcome Cards */}
+        {showOnboarding && (
+          <CoachOnboardingCard userId={coachUserId} onFinish={() => setShowOnboarding(false)} />
+        )}
+
         {/* Today's schedule */}
         <section>
           <div className="flex items-center justify-between mb-3">

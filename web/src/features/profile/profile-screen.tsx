@@ -6,7 +6,8 @@ import { ScreenHeader, Card, Spinner, Empty, ErrorBox, Row } from '@/components/
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import type { Client } from '@/lib/types'
-import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown, Palette } from 'lucide-react'
+import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown, Palette, Sparkles } from 'lucide-react'
+import CoachOnboardingModal from '@/components/coach-onboarding-modal'
 import { useAuth } from '@/components/auth-provider'
 import { logout } from '@/lib/auth'
 import { useState } from 'react'
@@ -176,6 +177,7 @@ export default function Profile() {
   const { data, isLoading, error } = useMe()
   const { forceGuest } = useAuth()
   const [devMsg, setDevMsg] = useState('')
+  const [showOnboardingModal, setShowOnboardingModal] = useState(false)
 
   const showDev = (label: string) => {
     setDevMsg(`«${label}» — ${UNDER_DEVELOPMENT.toLowerCase()}`)
@@ -193,6 +195,8 @@ export default function Profile() {
 
   return (
     <div className="pb-24 pt-6">
+      <CoachOnboardingModal open={showOnboardingModal} onClose={() => setShowOnboardingModal(false)} />
+
       {isLoading && <Spinner label="Загрузка..." />}
       {error && <ErrorBox error={error} />}
       {!isLoading && !data && <Empty text="Профиль не найден" />}
@@ -228,6 +232,7 @@ export default function Profile() {
                 <MenuItem icon={Calendar} label="Мой график" onClick={() => router.push('/dashboard/schedule')} />
                 <MenuItem icon={BarChart3} label="Статистика" onClick={() => router.push('/dashboard/statistics')} />
                 <MenuItem icon={Bell} label="Оповестить клиентов" onClick={() => router.push('/dashboard/notifications')} />
+                <MenuItem icon={Sparkles} label="О возможности приложения и бота" onClick={() => setShowOnboardingModal(true)} />
               </>
             )}
             <MenuItem icon={Settings} label="Настройки" onClick={() => showDev('Настройки')} />
