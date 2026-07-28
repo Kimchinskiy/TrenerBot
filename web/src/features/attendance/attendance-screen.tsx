@@ -102,8 +102,7 @@ export default function AttendanceScreen() {
 
   if (isLoading) {
     return (
-      <div>
-        <ScreenHeader title="Посещаемость" onBack={() => router.back()} />
+      <div className="pt-4">
         <Spinner label="Загрузка..." />
       </div>
     )
@@ -111,17 +110,14 @@ export default function AttendanceScreen() {
 
   if (error) {
     return (
-      <div>
-        <ScreenHeader title="Посещаемость" onBack={() => router.back()} />
+      <div className="pt-4">
         <ErrorBox error={error} />
       </div>
     )
   }
 
   return (
-    <div>
-      <ScreenHeader title="Посещаемость" onBack={() => router.back()} />
-
+    <div className="pt-4">
       <div className="px-5 pb-48">
         {/* Date */}
         <div className="flex items-center justify-center gap-2 mb-6 py-3 rounded-2xl bg-primary/5">

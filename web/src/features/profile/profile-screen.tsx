@@ -5,7 +5,6 @@ import { useMe, useCoachOnboarding, useUpgradeToCoach, useStartCoachTrial } from
 import { ScreenHeader, Card, Spinner, Empty, ErrorBox, Row } from '@/components/ui/screen'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { WaveDivider } from '@/components/ui/wave-divider'
 import type { Client } from '@/lib/types'
 import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown, Palette } from 'lucide-react'
 import { useAuth } from '@/components/auth-provider'
@@ -77,13 +76,13 @@ function CoachOnboarding() {
         <h3 className="text-lg font-bold text-foreground mb-4">Регистрация тренера</h3>
         <div className="flex flex-col gap-3">
           <input
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
             placeholder="Ваше имя и фамилия"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
           />
           <input
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
             placeholder="Вид спорта (необязательно)"
             value={sport}
             onChange={(e) => setSport(e.target.value)}
@@ -189,13 +188,11 @@ export default function Profile() {
     router.replace('/login')
   }
 
-  const firstName = data?.client?.full_name?.split(' ')[0] || (data?.role === 'parent' ? 'Родитель' : 'Тренер')
+  const displayName = data?.client?.full_name || (data?.role === 'admin' ? 'Администратор' : data?.role === 'coach' ? 'Тренер' : data?.role === 'parent' ? 'Родитель' : 'Клиент')
   const roleLabel = data?.role === 'coach' ? 'Тренер' : data?.role === 'admin' ? 'Администратор' : data?.role === 'parent' ? 'Родитель' : 'Клиент'
 
   return (
-    <div className="pb-24">
-      <ScreenHeader title="Профиль" />
-
+    <div className="pb-24 pt-6">
       {isLoading && <Spinner label="Загрузка..." />}
       {error && <ErrorBox error={error} />}
       {!isLoading && !data && <Empty text="Профиль не найден" />}
@@ -206,17 +203,12 @@ export default function Profile() {
           <div className="flex flex-col items-center">
             <Avatar className="h-20 w-20 border-4 border-card shadow-elevated mb-3">
               <AvatarFallback className="bg-primary/10 text-primary text-2xl font-bold">
-                {firstName.charAt(0)}
+                {displayName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            <h2 className="text-title font-bold text-foreground">{firstName}</h2>
+            <h2 className="text-title font-bold text-foreground">{displayName}</h2>
             <p className="text-sm text-muted-foreground mt-0.5">{roleLabel}</p>
           </div>
-
-          <WaveDivider className="text-primary/5 -my-2" />
-
-          {/* Client card */}
-          {data.client && <ClientCard c={data.client} />}
 
           {/* Coach onboarding */}
           {data.role === 'coach' && <CoachOnboarding />}

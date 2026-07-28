@@ -159,7 +159,7 @@ export default function GroupDetailScreen({ params }: { params: { id: string } }
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Поиск по ФИО..."
-                className="w-full rounded-2xl border border-border/60 bg-white pl-9 pr-4 py-2.5 text-sm"
+                className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 pl-9 py-2.5 text-sm"
               />
             </div>
             <div className="flex flex-col gap-1 max-h-64 overflow-y-auto">
@@ -259,7 +259,7 @@ function StudentRow({
         {menuOpen && (
           <>
             <div className="fixed inset-0 z-10" onClick={onCloseMenu} />
-            <div className="absolute right-0 top-full mt-1 z-20 min-w-[200px] rounded-2xl border border-border/60 bg-white p-1.5 shadow-lg">
+            <div className="absolute right-0 top-full mt-1 z-20 min-w-[200px] rounded-2xl border border-border/60 bg-card text-foreground p-1.5 shadow-lg">
               <button
                 onClick={() => {
                   onCloseMenu()

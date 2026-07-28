@@ -30,14 +30,14 @@ export default function LinkChildSection() {
           Найдите ребёнка по имени и дате рождения
         </p>
         <input
-          className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+          className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm"
           placeholder="Имя и фамилия ребёнка"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
         />
         <input
           type="date"
-          className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+          className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm"
           value={birthDate}
           onChange={(e) => setBirthDate(e.target.value)}
         />

@@ -13,7 +13,6 @@ import {
 import { ScreenHeader, Card, Spinner, Empty } from '@/components/ui/screen'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
-import { WaveDivider } from '@/components/ui/wave-divider'
 import { haptics } from '@/services/telegram'
 import {
   Phone,
@@ -95,7 +94,7 @@ function SendMessageModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <Card className="w-full max-w-lg p-5 shadow-2xl bg-white border border-border rounded-3xl relative flex flex-col gap-4">
+      <Card className="w-full max-w-lg p-5 shadow-2xl bg-card border border-border rounded-3xl relative flex flex-col gap-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -273,7 +272,7 @@ function CreateSubscriptionForm({
               type="button"
               onClick={() => setSubType(t)}
               className={`flex-1 rounded-xl py-2 text-sm font-semibold transition-all ${
-                subType === t ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'
+                subType === t ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               {t === 'count' ? 'По занятиям' : 'Безлимит'}
@@ -289,7 +288,7 @@ function CreateSubscriptionForm({
               type="number"
               value={lessons}
               onChange={(e) => setLessons(e.target.value)}
-              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+              className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
             />
           </div>
         )}
@@ -302,7 +301,7 @@ function CreateSubscriptionForm({
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="5000"
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
           />
         </div>
         <div>
@@ -313,7 +312,7 @@ function CreateSubscriptionForm({
             type="date"
             value={endDate}
             onChange={(e) => setEndDate(e.target.value)}
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
           />
         </div>
         <div className="flex gap-2">
@@ -391,8 +390,6 @@ export default function ClientCardScreen({ params }: { params: { id: string } })
             {isActive ? 'Активен' : client.status}
           </span>
         </div>
-
-        <WaveDivider className="text-primary/5 -my-2" />
 
         {/* Contact */}
 <section>

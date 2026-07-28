@@ -110,7 +110,7 @@ function CreateForm({
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Название"
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
           />
         </div>
         <div>
@@ -121,7 +121,7 @@ function CreateForm({
             value={schedule}
             onChange={(e) => setSchedule(e.target.value)}
             placeholder="Например: ПН/СР/ПТ 10:00"
-            className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+            className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -134,7 +134,7 @@ function CreateForm({
               value={maxMembers}
               onChange={(e) => setMaxMembers(e.target.value)}
               placeholder="10"
-              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+              className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
             />
           </div>
           <div>
@@ -146,7 +146,7 @@ function CreateForm({
               value={price}
               onChange={(e) => setPrice(e.target.value)}
               placeholder="5000"
-              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm"
+              className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-2.5 text-sm"
             />
           </div>
         </div>
@@ -221,21 +221,21 @@ export default function GroupsScreen() {
   }
 
   return (
-    <div>
-      <ScreenHeader
-        title="Группы"
-        subtitle={groups?.length ? `${groups.length} групп` : undefined}
-        action={
+    <div className="pt-4">
+      <div className="px-5 pb-24 flex flex-col gap-4">
+        <div className="flex items-center justify-between">
+          <span className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            {groups?.length ? `${groups.length} групп` : 'Список групп'}
+          </span>
           <button
             onClick={() => setShowCreate(true)}
-            className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:opacity-90 active:scale-95 transition-all"
           >
-            <Plus className="h-5 w-5" />
+            <Plus className="h-4 w-4" />
+            <span>Новая группа</span>
           </button>
-        }
-      />
+        </div>
 
-      <div className="px-5 pb-24 flex flex-col gap-4">
         {doneMsg && (
           <div className="flex items-center justify-center gap-2 rounded-2xl bg-success-light/50 px-4 py-3 text-sm font-semibold text-success">
             <Check className="h-4 w-4" />

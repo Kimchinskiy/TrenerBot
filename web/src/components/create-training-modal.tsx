@@ -92,9 +92,9 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-3xl bg-white p-5 pb-8 shadow-elevated fade-in"
+        className="w-full max-w-lg rounded-3xl bg-card border border-border/60 p-5 pb-8 shadow-elevated fade-in"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-5">
@@ -110,7 +110,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
               type="button"
               onClick={() => { setMode('client'); setSelectedGroup(null); setShowResults(false) }}
               className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${
-                mode === 'client' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'
+                mode === 'client' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <UserRound className="h-4 w-4" /> Клиент
@@ -119,7 +119,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
               type="button"
               onClick={() => { setMode('group'); setSelectedClient(null); setShowResults(false) }}
               className={`flex-1 flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all duration-200 ${
-                mode === 'group' ? 'bg-white shadow-sm text-foreground' : 'text-muted-foreground'
+                mode === 'group' ? 'bg-card shadow-sm text-foreground' : 'text-muted-foreground'
               }`}
             >
               <Users className="h-4 w-4" /> Группа
@@ -131,20 +131,20 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
               {mode === 'client' ? 'Клиент' : 'Группа'}
             </label>
             {mode === 'client' && selectedClient ? (
-              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-success" />
-                  <span className="text-sm font-semibold">{selectedClient.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{selectedClient.name}</span>
                 </div>
                 <button onClick={() => setSelectedClient(null)} className="text-xs text-primary font-semibold">
                   Изменить
                 </button>
               </div>
             ) : mode === 'group' && selectedGroup ? (
-              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-white px-4 py-3">
+              <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-card px-4 py-3">
                 <div className="flex items-center gap-2">
                   <Check className="h-4 w-4 text-success" />
-                  <span className="text-sm font-semibold">{selectedGroup.name}</span>
+                  <span className="text-sm font-semibold text-foreground">{selectedGroup.name}</span>
                 </div>
                 <button onClick={() => setSelectedGroup(null)} className="text-xs text-primary font-semibold">
                   Изменить
@@ -160,7 +160,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                   onChange={(e) => { setSearchQuery(e.target.value); setShowResults(true) }}
                   onFocus={() => setShowResults(true)}
                   placeholder={mode === 'client' ? 'Поиск по фамилии...' : 'Поиск по названию...'}
-                  className="w-full rounded-2xl border border-border/60 bg-white pl-10 pr-4 py-3 text-sm"
+                  className="w-full rounded-2xl border border-border/60 bg-card text-foreground placeholder:text-muted-foreground/60 pl-10 pr-4 py-3 text-sm shadow-sm"
                 />
                 {mode === 'group' && !selectedGroup && !searchQuery.trim() && groups && groups.length === 0 && (
                   <div className="mt-2 rounded-2xl border border-dashed border-border bg-muted/30 px-4 py-3 text-center">
@@ -169,7 +169,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                   </div>
                 )}
                 {showResults && searchQuery.trim() && (
-                  <div className="absolute z-10 mt-1 w-full rounded-2xl border border-border/50 bg-white shadow-elevated max-h-48 overflow-y-auto">
+                  <div className="absolute z-10 mt-1 w-full rounded-2xl border border-border/50 bg-card text-foreground shadow-elevated max-h-48 overflow-y-auto">
                     {(mode === 'client' ? filteredClients : filteredGroups).length === 0 ? (
                       <div className="px-4 py-3 text-sm text-muted-foreground">Ничего не найдено</div>
                     ) : (
@@ -177,7 +177,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                         <button
                           key={item.id}
                           onClick={() => mode === 'client' ? handleSelectClient(item.id, item.full_name) : handleSelectGroup(item.id, item.name)}
-                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted/30 transition-colors border-b border-border/30 last:border-0 font-medium"
+                          className="w-full text-left px-4 py-3 text-sm hover:bg-muted/40 transition-colors border-b border-border/30 last:border-0 font-medium text-foreground"
                         >
                           {mode === 'client' ? item.full_name : item.name}
                         </button>
@@ -197,7 +197,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+              className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm shadow-sm"
             />
           </div>
 
@@ -210,7 +210,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+                className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm shadow-sm"
               />
             </div>
             <div>
@@ -224,7 +224,7 @@ export default function CreateTrainingModal({ open, onClose }: Props) {
                 step={5}
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm"
+                className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm shadow-sm"
               />
             </div>
           </div>

@@ -99,7 +99,7 @@ export default function NotificationsScreen() {
     <div>
       <ScreenHeader title="Оповещения" onBack={() => router.back()} />
 
-      <div className="px-5 flex flex-col gap-5">
+      <div className="px-5 flex flex-col gap-5 pb-24">
         {/* Recipient Filter Selection */}
         <section>
           <h3 className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-2 px-1">
@@ -124,7 +124,7 @@ export default function NotificationsScreen() {
                 className={`flex items-center gap-2 rounded-2xl p-3 text-xs font-semibold transition-all border text-left ${
                   filter === key
                     ? 'bg-primary text-primary-foreground border-primary shadow-sm'
-                    : 'bg-white text-foreground border-border hover:bg-muted/50'
+                    : 'bg-card text-foreground border-border/60 hover:bg-muted/60 shadow-card'
                 }`}
               >
                 <Icon className="h-4 w-4 shrink-0" />
@@ -143,10 +143,10 @@ export default function NotificationsScreen() {
             <select
               value={selectedGroupId || ''}
               onChange={(e) => setSelectedGroupId(Number(e.target.value))}
-              className="w-full rounded-2xl border border-border/60 bg-white px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full rounded-2xl border border-border/60 bg-card text-foreground px-4 py-3 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/20 shadow-sm"
             >
               {groups?.map((g) => (
-                <option key={g.id} value={g.id}>
+                <option key={g.id} value={g.id} className="bg-card text-foreground">
                   {g.name || `Группа #${g.id}`} ({g.member_count || 0} уч.)
                 </option>
               ))}
@@ -180,7 +180,7 @@ export default function NotificationsScreen() {
                 placeholder="Поиск по имени клиента..."
                 value={clientSearch}
                 onChange={(e) => setClientSearch(e.target.value)}
-                className="w-full rounded-2xl border border-border/60 bg-white pl-10 pr-4 py-2.5 text-sm"
+                className="w-full rounded-2xl border border-border/60 bg-card text-foreground placeholder:text-muted-foreground/60 pl-10 pr-4 py-2.5 text-sm shadow-sm"
               />
             </div>
 
@@ -193,7 +193,7 @@ export default function NotificationsScreen() {
                       key={c.id}
                       onClick={() => toggleClientSelection(c.id)}
                       className={`flex items-center justify-between p-3 cursor-pointer rounded-xl transition-colors ${
-                        isSelected ? 'bg-primary/10' : 'hover:bg-muted/30'
+                        isSelected ? 'bg-primary/10' : 'hover:bg-muted/40'
                       }`}
                     >
                       <div className="flex flex-col">
@@ -206,7 +206,7 @@ export default function NotificationsScreen() {
                         className={`flex h-5 w-5 items-center justify-center rounded-lg border transition-colors ${
                           isSelected
                             ? 'bg-primary text-primary-foreground border-primary'
-                            : 'border-border bg-white'
+                            : 'border-border/60 bg-card text-foreground'
                         }`}
                       >
                         {isSelected && <Check className="h-3.5 w-3.5" />}
@@ -225,9 +225,9 @@ export default function NotificationsScreen() {
 
         {/* Recipients Preview Summary */}
         <section>
-          <Card className="flex items-center justify-between bg-primary/5 border-primary/20">
+          <Card className="flex items-center justify-between bg-primary/10 border-primary/20">
             <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/15 text-primary">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/20 text-primary">
                 <Users className="h-5 w-5" />
               </div>
               <div>
@@ -248,7 +248,7 @@ export default function NotificationsScreen() {
               </div>
             </div>
             {previewData?.recipients && previewData.recipients.length > 0 && (
-              <span className="text-xs font-semibold px-2.5 py-1 bg-white rounded-full text-primary border border-primary/20">
+              <span className="text-xs font-semibold px-3 py-1 bg-card rounded-full text-primary border border-primary/20 shadow-sm">
                 {previewData.recipients.filter((r) => r.user_id !== null).length} в Telegram
               </span>
             )}
@@ -281,7 +281,7 @@ export default function NotificationsScreen() {
                 placeholder="Текст рассылки для клиентов..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                className="w-full rounded-2xl border border-border/60 bg-white px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full rounded-2xl border border-border/60 bg-card text-foreground placeholder:text-muted-foreground/60 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none shadow-sm transition-all"
               />
             </div>
 

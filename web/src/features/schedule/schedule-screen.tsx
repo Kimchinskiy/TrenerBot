@@ -154,11 +154,7 @@ export default function Schedule() {
   const { data: me } = useMe()
 
   return (
-    <div>
-      <ScreenHeader
-        title={me?.role === 'parent' ? 'Дети' : 'Расписание'}
-        subtitle={me?.role === 'parent' ? '' : 'Эта неделя'}
-      />
+    <div className="pt-2">
       {me?.role === 'parent' ? <ParentView /> : <CoachView />}
     </div>
   )

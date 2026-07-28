@@ -33,7 +33,7 @@ export function QuickOverview({ overview }: { overview: QuickOverviewType }) {
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.35, duration: 0.3 }}
-      className="rounded-3xl bg-white shadow-card overflow-hidden"
+      className="rounded-3xl bg-card border border-border/50 shadow-card overflow-hidden"
     >
       <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground px-5 pt-5 pb-2">
         Быстрый обзор

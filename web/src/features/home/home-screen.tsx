@@ -4,7 +4,6 @@ import { useMemo, useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useMe, useScheduleWeek, usePendingLeads } from '@/lib/hooks'
 import { weekFromToday } from '@/lib/dates'
-import { WaveDivider } from '@/components/ui/wave-divider'
 import { SkeletonList } from '@/components/ui/skeleton'
 import { Card } from '@/components/ui/card'
 import { Clock, ArrowRight, Bell, CheckCircle, Users, UserPlus } from 'lucide-react'
@@ -157,9 +156,7 @@ export default function HomeScreen() {
         </div>
       </div>
 
-      <WaveDivider className="text-primary/5 -mb-1" />
-
-      <div className="px-5 flex flex-col gap-5">
+      <div className="px-5 flex flex-col gap-5 pt-3">
         {/* Today's schedule */}
         <section>
           <div className="flex items-center justify-between mb-3">

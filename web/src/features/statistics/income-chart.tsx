@@ -6,7 +6,7 @@ import type { ChartPoint } from '@/lib/types'
 export function IncomeChart({ data, period }: { data: ChartPoint[]; period: string }) {
   if (!data || data.length === 0) {
     return (
-      <div className="rounded-3xl bg-white p-5 shadow-card">
+      <div className="rounded-3xl bg-card border border-border/50 p-5 shadow-card">
         <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-1">
           Доход
         </p>
@@ -25,7 +25,7 @@ export function IncomeChart({ data, period }: { data: ChartPoint[]; period: stri
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.3, duration: 0.3 }}
-      className="rounded-3xl bg-white p-5 shadow-card"
+      className="rounded-3xl bg-card border border-border/50 p-5 shadow-card"
     >
       <p className="text-sm font-bold uppercase tracking-wider text-muted-foreground mb-4">
         Доход

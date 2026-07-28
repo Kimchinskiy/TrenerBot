@@ -15,7 +15,7 @@ export function DebtorsCard({ debtors }: { debtors: DebtorsSummary }) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.25, duration: 0.3 }}
       onClick={() => hasDebtors && setExpanded(!expanded)}
-      className={`rounded-3xl bg-white p-5 shadow-card transition-all duration-200 ${
+      className={`rounded-3xl bg-card border border-border/50 p-5 shadow-card transition-all duration-200 ${
         hasDebtors ? 'active:scale-[0.98] cursor-pointer' : ''
       }`}
     >

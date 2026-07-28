@@ -14,6 +14,5 @@ export * from './collapsible'
 export * from './floating-navbar'
 export * from './switch'
 export * from './stat-card'
-export * from './wave-divider'
 export * from './skeleton'
 

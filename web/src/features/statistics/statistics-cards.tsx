@@ -59,7 +59,7 @@ function StatCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.3 }}
-      className="flex flex-col gap-2 rounded-3xl bg-white p-4 shadow-card active:scale-[0.97] transition-transform"
+      className="flex flex-col gap-2 rounded-3xl bg-card border border-border/50 p-4 shadow-card active:scale-[0.97] transition-transform"
     >
       <div className={`flex h-9 w-9 items-center justify-center rounded-xl ${color}`}>
         <Icon className="h-4 w-4" />

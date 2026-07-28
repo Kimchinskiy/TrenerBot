@@ -8,7 +8,7 @@ export function PeriodSwitcher({ value, onChange }: { value: string; onChange: (
   ]
 
   return (
-    <div className="flex rounded-2xl bg-white shadow-card p-1">
+    <div className="flex rounded-2xl bg-card border border-border/50 shadow-card p-1">
       {periods.map((p) => (
         <button
           key={p.key}
