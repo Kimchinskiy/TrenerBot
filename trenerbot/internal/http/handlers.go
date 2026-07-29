@@ -47,7 +47,7 @@ func listStudents(svc *service.Services, w http.ResponseWriter, _ *http.Request)
 
 func clientsMe(svc *service.Services, w http.ResponseWriter, r *http.Request) {
 	u := UserFrom(r.Context())
-	resp := map[string]any{"role": u.Role, "telegram_id": u.TelegramID}
+	resp := map[string]any{"role": u.Role, "user_id": u.ID, "telegram_id": u.TelegramID}
 	if u.Role == domain.RoleParent {
 		children, err := svc.ChildrenOfParent(u.ID)
 		if err != nil {

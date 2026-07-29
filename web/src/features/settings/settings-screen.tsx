@@ -6,7 +6,9 @@ import { api } from '@/lib/api'
 import { ScreenHeader, Card, Spinner, ErrorBox, Row } from '@/components/ui/screen'
 import { TelegramLoginButton } from '@/integrations/telegram/login-widget'
 import { Button } from '@/components/ui/button'
-import { CheckCircle2, XCircle, Smartphone } from 'lucide-react'
+import { CheckCircle2, XCircle, ExternalLink } from 'lucide-react'
+
+const BOT_USERNAME = process.env.NEXT_PUBLIC_TELEGRAM_BOT || ''
 
 export default function Settings() {
   const { data, isLoading, error, refetch } = useMe()
@@ -29,6 +31,7 @@ export default function Settings() {
   if (error) return <ErrorBox error={error} />
 
   const telegramId = data?.telegram_id
+  const bindLink = data?.user_id ? `https://t.me/${BOT_USERNAME}?start=bind_${data.user_id}` : ''
 
   return (
     <div className="pb-24 pt-6">
@@ -51,14 +54,37 @@ export default function Settings() {
               </div>
             </div>
           ) : (
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-4">
               <div className="flex items-center gap-3 p-3 rounded-2xl bg-muted/30 border border-border/30">
                 <XCircle className="h-5 w-5 text-muted-foreground shrink-0" />
                 <p className="text-sm text-muted-foreground">Telegram не подключён</p>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Нажмите на кнопку ниже, чтобы войти через Telegram. Бот @{process.env.NEXT_PUBLIC_TELEGRAM_BOT} будет привязан к вашему аккаунту.
-              </p>
+
+              <div className="p-4 rounded-2xl bg-primary/5 border border-primary/20">
+                <h4 className="text-sm font-bold text-foreground mb-2">Быстрая привязка через бота</h4>
+                <p className="text-xs text-muted-foreground mb-3">
+                  Нажмите на кнопку ниже — откроется Telegram с ботом @{BOT_USERNAME}. Нажмите «Начать» — привязка произойдёт автоматически, без регистрации.
+                </p>
+                <a
+                  href={bindLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 w-full rounded-2xl bg-primary text-primary-foreground px-4 py-3 text-sm font-semibold hover:bg-primary/90 transition-colors"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  Привязать Telegram
+                </a>
+              </div>
+
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border/40" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                  <span className="bg-card px-2 text-muted-foreground">или через виджет</span>
+                </div>
+              </div>
+
               <TelegramLoginButton onAuth={handleTelegramAuth} />
               {linkOk && (
                 <p className="text-sm text-success font-semibold text-center">Telegram успешно привязан!</p>

@@ -550,6 +550,7 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		b.mu.Lock()
 		if st, ok := b.reg[chatID]; ok {
 			st.regType = "self"
+			st.step = rsLevel
 			b.mu.Unlock()
 			b.collectReg(chatID, tgID, "", st)
 		} else {
@@ -560,6 +561,7 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		b.mu.Lock()
 		if st, ok := b.reg[chatID]; ok {
 			st.regType = "child"
+			st.step = rsChildName
 			b.mu.Unlock()
 			b.collectReg(chatID, tgID, "", st)
 		} else {
@@ -571,6 +573,7 @@ func (b *Bot) handleCallback(cb *tgbotapi.CallbackQuery) {
 		b.mu.Lock()
 		if st, ok := b.reg[chatID]; ok {
 			st.level = level
+			st.step = rsPhone
 			b.mu.Unlock()
 			b.collectReg(chatID, tgID, "", st)
 		} else {
