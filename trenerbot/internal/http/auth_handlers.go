@@ -279,12 +279,38 @@ func bindTelegramUser(svc *service.Services) http.HandlerFunc {
 			writeError(w, http.StatusBadRequest, "invalid request")
 			return
 		}
-		_, err := svc.Store.DB.Exec(`UPDATE users SET telegram_id = ?, updated_at = datetime('now') WHERE id = ?`, body.TelegramID, body.UserID)
+		tx, err := svc.Store.DB.Begin()
 		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to begin transaction")
+			return
+		}
+		defer tx.Rollback()
+
+		// Release telegram_id from any other user (UNIQUE constraint) and clean orphans
+		if _, err := tx.Exec(`DELETE FROM students WHERE user_id IN (SELECT id FROM users WHERE telegram_id = ? AND id != ?)`, body.TelegramID, body.UserID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to clean students")
+			return
+		}
+		if _, err := tx.Exec(`DELETE FROM relationships WHERE user_id IN (SELECT id FROM users WHERE telegram_id = ? AND id != ?)`, body.TelegramID, body.UserID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to clean relationships")
+			return
+		}
+		if _, err := tx.Exec(`UPDATE users SET telegram_id = NULL, updated_at = datetime('now') WHERE telegram_id = ? AND id != ?`, body.TelegramID, body.UserID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to release telegram_id")
+			return
+		}
+		if _, err := tx.Exec(`UPDATE users SET telegram_id = ?, updated_at = datetime('now') WHERE id = ?`, body.TelegramID, body.UserID); err != nil {
 			writeError(w, http.StatusInternalServerError, "failed to update telegram_id")
 			return
 		}
-		_, _ = svc.Store.DB.Exec(`UPDATE clients SET bot_access = 1 WHERE user_id = ?`, body.UserID)
+		if _, err := tx.Exec(`UPDATE clients SET bot_access = 1 WHERE user_id = ?`, body.UserID); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to update bot_access")
+			return
+		}
+		if err := tx.Commit(); err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to commit")
+			return
+		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
 }

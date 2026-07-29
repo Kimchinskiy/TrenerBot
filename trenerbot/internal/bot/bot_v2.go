@@ -194,7 +194,7 @@ func (b *Bot) cmdStart(chatID int64, tgID string, from *tgbotapi.User, text stri
 				b.send(chatID, "❌ Не удалось привязать аккаунт. Попробуйте еще раз на сайте.")
 				return
 			}
-			b.send(chatID, "🎉 **Telegram успешно подключён к вашему аккаунту в Плавли!**\n\nТеперь вы будете получать важные уведомления и сможете управлять расписанием.")
+			b.send(chatID, "🎉 Telegram успешно подключён к вашему аккаунту в Плавли!\n\nТеперь вы будете получать важные уведомления и сможете управлять расписанием.")
 			b.showMenu(chatID, tgID)
 			return
 		}
