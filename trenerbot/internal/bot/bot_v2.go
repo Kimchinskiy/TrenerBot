@@ -132,7 +132,8 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 	tgID := strconv.FormatInt(upd.Message.From.ID, 10)
 	text := strings.TrimSpace(upd.Message.Text)
 
-	// If message is a command (starts with /), cancel any active FSM and execute command
+	// If message is a command (starts with /), cancel any active FSM.
+	// Only /start is supported; all other commands are silently ignored.
 	if strings.HasPrefix(text, "/") {
 		b.mu.Lock()
 		delete(b.reg, chatID)
@@ -140,15 +141,8 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 		delete(b.absenceCtx, chatID)
 		b.mu.Unlock()
 
-		switch {
-		case strings.HasPrefix(text, "/start"):
+		if strings.HasPrefix(text, "/start") {
 			b.cmdStart(chatID, tgID, upd.Message.From, text)
-		case strings.HasPrefix(text, "/menu"):
-			b.showMenu(chatID, tgID)
-		case strings.HasPrefix(text, "/schedule"):
-			b.showSchedule(chatID, tgID)
-		default:
-			b.send(chatID, "Используйте кнопки меню или команду /menu")
 		}
 		return
 	}
@@ -184,7 +178,7 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 		return
 	}
 
-	b.send(chatID, "Используйте кнопки меню или команду /menu")
+	b.send(chatID, "Используйте кнопки меню")
 }
 
 // ---------- /start ----------
@@ -210,10 +204,16 @@ func (b *Bot) cmdStart(chatID int64, tgID string, from *tgbotapi.User, text stri
 		slog.Error("telegram_login", "err", err)
 	}
 
-	_, err := b.c.Me(tgID)
+	me, err := b.c.Me(tgID)
 	if err != nil {
 		slog.Error("me", "err", err)
 		b.send(chatID, fmt.Sprintf("Ошибка: %s", err))
+		return
+	}
+
+	// Coaches and admins go straight to the menu
+	if me != nil && (me.Role == domain.RoleCoach || me.Role == domain.RoleAdmin) {
+		b.showMenu(chatID, tgID)
 		return
 	}
 

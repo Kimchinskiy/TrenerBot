@@ -40,6 +40,7 @@ export interface MeResult {
   role: 'admin' | 'coach' | 'client' | 'parent'
   client?: Client
   children?: Client[]
+  telegram_id?: string | null
 }
 
 export interface Attendance {

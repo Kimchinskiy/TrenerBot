@@ -198,6 +198,13 @@ export const api = {
       body: JSON.stringify({ init_data: initData }),
     })
   },
+
+  linkTelegramWidget(fields: Record<string, string>) {
+    return request<{ status: string }>('/auth/link/telegram', {
+      method: 'POST',
+      body: JSON.stringify(fields),
+    })
+  },
 }
 
 export const endpoints = {

@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation'
 import { useMe, useCoachOnboarding, useUpgradeToCoach, useStartCoachTrial } from '@/lib/hooks'
 import { ScreenHeader, Card, Spinner, Empty, ErrorBox, Row } from '@/components/ui/screen'
+import { prettyDateFull } from '@/lib/dates'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import type { Client } from '@/lib/types'
@@ -143,7 +144,7 @@ function CoachOnboarding() {
           <Row label="Пробный период" value={`${daysLeft} дн.`} />
         )}
         {sub?.status === 'active' && sub.paid_until && (
-          <Row label="Оплачено до" value={sub.paid_until} />
+          <Row label="Оплачено до" value={prettyDateFull(sub.paid_until)} />
         )}
       </div>
     </Card>
@@ -236,7 +237,7 @@ export default function Profile() {
                 <MenuItem icon={Sparkles} label="О возможности приложения и бота" onClick={() => setShowOnboardingModal(true)} />
               </>
             )}
-            <MenuItem icon={Settings} label="Настройки" onClick={() => showDev('Настройки')} />
+            <MenuItem icon={Settings} label="Настройки" onClick={() => router.push('/dashboard/settings')} />
             <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => showDev('Поддержка')} />
           </div>
 

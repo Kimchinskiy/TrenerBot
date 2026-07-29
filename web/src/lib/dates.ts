@@ -24,6 +24,11 @@ export function prettyDate(iso: string): string {
   return `${d}.${m}`
 }
 
+export function prettyDateFull(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  return `${d}.${m}.${y}`
+}
+
 export function prettyDateLong(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number)
   const date = new Date(y, m - 1, d)
