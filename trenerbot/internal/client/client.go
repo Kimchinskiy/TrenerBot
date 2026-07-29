@@ -24,7 +24,7 @@ type Client struct {
 
 func New(base, serviceToken string) *Client {
 	if base == "" {
-		base = "http://localhost:8080"
+		base = "http://localhost:8081"
 	}
 	return &Client{base: base, tok: serviceToken, http: &http.Client{Timeout: 15 * time.Second}}
 }

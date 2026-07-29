@@ -40,7 +40,7 @@ func Load() (*Config, error) {
 	_ = godotenv.Load()
 
 	cfg := &Config{
-		HTTPAddr:    getEnv("HTTP_ADDR", ":8080"),
+		HTTPAddr:    getEnv("HTTP_ADDR", ":8081"),
 		DBPath:      getEnv("DB_PATH", "data/crm.db"),
 		JWTSecret:   getEnv("JWT_SECRET", "change-me-in-prod"),
 		ServiceToken: getEnv("SERVICE_TOKEN", "local-dev-service-token"),
@@ -55,7 +55,7 @@ func Load() (*Config, error) {
 
 		SchedulerInterval: getEnvDuration("SCHEDULER_INTERVAL", 30*time.Second),
 		AccessTokenTTL:    getEnvDuration("ACCESS_TOKEN_TTL", 15*time.Minute),
-		APIBaseURL:        getEnv("API_BASE_URL", "http://localhost:8080"),
+		APIBaseURL:        getEnv("API_BASE_URL", "http://localhost:8081"),
 	}
 
 	if cfg.BotToken == "" {
