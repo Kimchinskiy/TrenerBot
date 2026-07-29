@@ -80,10 +80,11 @@ export function RegisterForm() {
               <Label htmlFor="phone">Телефон</Label>
               <Input
                 id="phone"
-                placeholder="+7 (999) 123-45-67"
-                inputMode="tel"
-                autoComplete="tel"
-                {...register('phone')}
+    placeholder="+7 (999) 123-45-67"
+    inputMode="tel"
+    autoComplete="tel"
+    maxLength={12}
+    {...register('phone')}
               />
               {errors.phone && (
                 <p className="mt-1.5 text-xs font-semibold text-destructive">{errors.phone.message}</p>

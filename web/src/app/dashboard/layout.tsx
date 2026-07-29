@@ -63,7 +63,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="flex h-full flex-col bg-background">
-      <div className="flex-1 overflow-y-auto pb-24">{children}</div>
+      <div className="mx-auto w-full max-w-md flex-1 overflow-y-auto pb-24" style={{ paddingTop: 'var(--safe-top)' }}>{children}</div>
       <FloatingNavbar
         items={items.map((item) => ({
           ...item,

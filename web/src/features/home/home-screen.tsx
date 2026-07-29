@@ -157,10 +157,10 @@ export default function HomeScreen() {
     <div className="pb-24">
       <CoachOnboardingModal open={showOnboarding} onClose={() => setShowOnboarding(false)} userId={coachUserId} />
       {/* Header */}
-      <div className="px-5 pt-6 pb-2">
+      <div className="px-5 pt-8 pb-2">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm font-medium text-muted-foreground">{greeting}</p>
+            <p className="text-base font-semibold text-foreground/70">{greeting}</p>
             <h1 className="text-display font-bold tracking-tight gradient-text mt-0.5">
               {firstName}!
             </h1>

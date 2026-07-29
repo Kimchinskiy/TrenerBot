@@ -19,7 +19,7 @@ export default function FloatingNavbar({
   const pathname = usePathname()
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-5 pt-2">
+    <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-4 pb-5 pt-2" style={{ paddingBottom: 'calc(1.25rem + var(--safe-bottom))' }}>
       <nav className="glass-strong flex items-center gap-1 rounded-2xl px-2 py-2 shadow-elevated w-full max-w-md">
         {items.map((item) => {
           const isActive = item.href ? pathname.startsWith(item.href) : false

@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import { useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useDateAttendance, useSaveDateAttendance } from '@/lib/hooks'
 import { isoDate } from '@/lib/dates'
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/switch'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { haptics } from '@/services/telegram'
 import type { DateAttendanceClient } from '@/lib/types'
-import { CheckCircle2, Calendar } from 'lucide-react'
+import { CheckCircle2, Calendar, ChevronLeft, ChevronRight } from 'lucide-react'
 
 const WEEKDAYS_RU = ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота']
 const MONTHS_RU = ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря']
@@ -27,11 +27,21 @@ function fmtWeekday(iso: string): string {
   return WEEKDAYS_RU[dt.getDay()]
 }
 
+function addDays(iso: string, n: number): string {
+  const [y, m, d] = iso.split('-').map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + n)
+  return isoDate(dt)
+}
+
 export default function AttendanceScreen() {
   const router = useRouter()
   const today = useMemo(() => isoDate(new Date()), [])
+  const dateInputRef = useRef<HTMLInputElement>(null)
 
-  const { data, isLoading, error } = useDateAttendance(today)
+  const [selectedDate, setSelectedDate] = useState(today)
+
+  const { data, isLoading, error } = useDateAttendance(selectedDate)
   const saveMutation = useSaveDateAttendance()
 
   const [draft, setDraft] = useState<Record<number, boolean>>({})
@@ -39,6 +49,12 @@ export default function AttendanceScreen() {
   const [confirming, setConfirming] = useState(false)
   const [successMsg, setSuccessMsg] = useState('')
   const [saveError, setSaveError] = useState('')
+
+  const goPrevDay = () => setSelectedDate((d) => addDays(d, -1))
+  const goNextDay = () => setSelectedDate((d) => addDays(d, 1))
+  const handleDatePickerChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.value) setSelectedDate(e.target.value)
+  }
 
   useEffect(() => {
     if (!data?.clients) return
@@ -48,6 +64,9 @@ export default function AttendanceScreen() {
     })
     setDraft(s)
     setSaved({ ...s })
+    setConfirming(false)
+    setSuccessMsg('')
+    setSaveError('')
   }, [data])
 
   const hasChanges = useMemo(
@@ -79,7 +98,7 @@ export default function AttendanceScreen() {
     if (entries.length === 0) return
 
     try {
-      await saveMutation.mutateAsync({ date: today, entries })
+      await saveMutation.mutateAsync({ date: selectedDate, entries })
       setSaved({ ...draft })
       setSuccessMsg('Посещаемость сохранена')
       setSaveError('')
@@ -119,14 +138,29 @@ export default function AttendanceScreen() {
   return (
     <div className="pt-4">
       <div className="px-5 pb-48">
-        {/* Date */}
-        <div className="flex items-center justify-center gap-2 mb-6 py-3 rounded-2xl bg-primary/5">
-          <Calendar className="h-4 w-4 text-primary" />
-          <span className="text-sm font-bold text-foreground">{fmtWeekday(today)}, {fmtDate(today)}</span>
+        {/* Date navigation */}
+        <div className="flex items-center justify-between mb-6 py-3 px-3 rounded-2xl bg-primary/5">
+          <button onClick={goPrevDay} className="p-1 text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button onClick={() => dateInputRef.current?.showPicker()} className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-primary shrink-0" />
+            <span className="text-sm font-bold text-foreground">{fmtWeekday(selectedDate)}, {fmtDate(selectedDate)}</span>
+          </button>
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={selectedDate}
+            onChange={handleDatePickerChange}
+            className="sr-only"
+          />
+          <button onClick={goNextDay} className="p-1 text-muted-foreground hover:text-foreground transition-colors">
+            <ChevronRight className="h-5 w-5" />
+          </button>
         </div>
 
         {(!data?.clients || data.clients.length === 0) && (
-          <Empty text="Сегодня нет тренировок" />
+          <Empty text="Нет тренировок" />
         )}
 
         {data?.clients && Array.from(clientsByTime.entries()).map(([time, clients]) => (
@@ -158,7 +192,7 @@ export default function AttendanceScreen() {
       </div>
 
       {/* Bottom action */}
-      <div className="fixed bottom-[96px] left-0 right-0 z-40 border-t border-border/50 bg-card/95 backdrop-blur-md px-5 pt-4 pb-5">
+      <div className="fixed bottom-[96px] left-0 right-0 z-40 border-t border-border/50 bg-card/95 backdrop-blur-md px-5 pt-4 pb-5 flex justify-center">
         <div className="w-full max-w-md">
           {successMsg && (
             <div className="mb-3 flex items-center justify-center gap-2 text-sm font-semibold text-success">
