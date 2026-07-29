@@ -2,7 +2,8 @@ import withPWA from 'next-pwa'
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'standalone',
+  output: 'export',
+  images: { unoptimized: true },
   reactStrictMode: true,
   async rewrites() {
     const target = process.env.API_BASE_URL || 'http://localhost:8081'
