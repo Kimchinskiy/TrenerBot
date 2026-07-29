@@ -192,6 +192,7 @@ func Router(svc *service.Services, cfg *config.Config) http.Handler {
 		r.Post("/auth/telegram", serviceTokenOnly(cfg, func(w http.ResponseWriter, r *http.Request) {
 			authTelegram(svc, w, r)
 		}))
+		r.Post("/auth/bind-telegram", serviceTokenOnly(cfg, bindTelegramUser(svc)))
 
 		// Website authentication (primary product). Public endpoints.
 		// optionalAuth lets provider logins also act as "link to my account" when a token is sent.

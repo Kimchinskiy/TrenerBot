@@ -267,3 +267,24 @@ func setPassword(svc *service.Services) http.HandlerFunc {
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	}
 }
+
+// POST /api/auth/bind-telegram — service-token internal endpoint for linking telegram_id to user_id
+func bindTelegramUser(svc *service.Services) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			UserID     int64  `json:"user_id"`
+			TelegramID string `json:"telegram_id"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.UserID == 0 || body.TelegramID == "" {
+			writeError(w, http.StatusBadRequest, "invalid request")
+			return
+		}
+		_, err := svc.Store.DB.Exec(`UPDATE users SET telegram_id = ?, updated_at = datetime('now') WHERE id = ?`, body.TelegramID, body.UserID)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, "failed to update telegram_id")
+			return
+		}
+		_, _ = svc.Store.DB.Exec(`UPDATE clients SET bot_access = 1 WHERE user_id = ?`, body.UserID)
+		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	}
+}

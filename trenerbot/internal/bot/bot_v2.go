@@ -142,7 +142,7 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 
 		switch {
 		case strings.HasPrefix(text, "/start"):
-			b.cmdStart(chatID, tgID, upd.Message.From)
+			b.cmdStart(chatID, tgID, upd.Message.From, text)
 		case strings.HasPrefix(text, "/menu"):
 			b.showMenu(chatID, tgID)
 		case strings.HasPrefix(text, "/schedule"):
@@ -189,7 +189,23 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 
 // ---------- /start ----------
 
-func (b *Bot) cmdStart(chatID int64, tgID string, from *tgbotapi.User) {
+func (b *Bot) cmdStart(chatID int64, tgID string, from *tgbotapi.User, text string) {
+	args := strings.Fields(text)
+	if len(args) >= 2 && strings.HasPrefix(args[1], "bind_") {
+		userIDStr := strings.TrimPrefix(args[1], "bind_")
+		userID, _ := strconv.ParseInt(userIDStr, 10, 64)
+		if userID > 0 {
+			if err := b.c.BindTelegramUser(userID, tgID); err != nil {
+				slog.Error("bind_telegram_err", "err", err)
+				b.send(chatID, "❌ Не удалось привязать аккаунт. Попробуйте еще раз на сайте.")
+				return
+			}
+			b.send(chatID, "🎉 **Telegram успешно подключён к вашему аккаунту в Плавли!**\n\nТеперь вы будете получать важные уведомления и сможете управлять расписанием.")
+			b.showMenu(chatID, tgID)
+			return
+		}
+	}
+
 	if _, err := b.c.TelegramLogin(tgID, "", "", 0, "", "telegram_bot"); err != nil {
 		slog.Error("telegram_login", "err", err)
 	}

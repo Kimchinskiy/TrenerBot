@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import type { Client } from '@/lib/types'
 import { Bell, Settings, HelpCircle, LogOut, Users, Calendar, BarChart3, ChevronRight, Crown, Palette, Sparkles } from 'lucide-react'
 import CoachOnboardingModal from '@/components/coach-onboarding-modal'
+import { TelegramIntegrationCard } from '@/components/telegram-integration-card'
 import { useAuth } from '@/components/auth-provider'
 import { logout } from '@/lib/auth'
 import { useState } from 'react'
@@ -238,6 +239,13 @@ export default function Profile() {
             <MenuItem icon={Settings} label="Настройки" onClick={() => showDev('Настройки')} />
             <MenuItem icon={HelpCircle} label="Поддержка" onClick={() => showDev('Поддержка')} />
           </div>
+
+          {/* Telegram Integration Card */}
+          <TelegramIntegrationCard
+            userId={data.client?.user_id || data.client?.id}
+            hasBotAccess={data.client?.bot_access}
+            phone={data.client?.phone || undefined}
+          />
 
           {/* Theme Switcher Card */}
           <Card className="p-4 border-border/50 bg-card">

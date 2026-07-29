@@ -86,6 +86,14 @@ func (c *Client) TelegramLogin(tgID, fullName, phone string, age int, medical, s
 	return &res, nil
 }
 
+func (c *Client) BindTelegramUser(userID int64, tgID string) error {
+	req := map[string]interface{}{
+		"user_id":     userID,
+		"telegram_id": tgID,
+	}
+	return c.do(http.MethodPost, "/api/auth/bind-telegram", tgID, req, nil)
+}
+
 type MeResult struct {
 	Role     domain.Role     `json:"role"`
 	Client   *domain.Student `json:"client"`
