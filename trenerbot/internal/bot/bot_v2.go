@@ -54,10 +54,9 @@ type Bot struct {
 	c     *client.Client
 	cfg   *config.Config
 	mu    sync.Mutex
-	reg   map[int64]*regState
-	expect map[int64]expectType
+	reg        map[int64]*regState
+	expect     map[int64]expectType
 	absenceCtx map[int64]*absenceCtx
-	roleOverride map[int64]domain.Role
 }
 
 type absenceCtx struct {
@@ -77,13 +76,12 @@ func New(cfg *config.Config) (*Bot, error) {
 		}
 	}
 	return &Bot{
-		api:    api,
-		c:      client.New(cfg.APIBaseURL, cfg.ServiceToken),
-		cfg:    cfg,
-		reg:    make(map[int64]*regState),
-		expect: make(map[int64]expectType),
+		api:        api,
+		c:          client.New(cfg.APIBaseURL, cfg.ServiceToken),
+		cfg:        cfg,
+		reg:        make(map[int64]*regState),
+		expect:     make(map[int64]expectType),
 		absenceCtx: make(map[int64]*absenceCtx),
-		roleOverride: make(map[int64]domain.Role),
 	}, nil
 }
 
@@ -149,8 +147,6 @@ func (b *Bot) handleUpdate(upd tgbotapi.Update) {
 			b.showMenu(chatID, tgID)
 		case strings.HasPrefix(text, "/schedule"):
 			b.showSchedule(chatID, tgID)
-		case strings.HasPrefix(text, "/role"):
-			b.cmdRole(chatID, strings.Fields(text))
 		default:
 			b.send(chatID, "Используйте кнопки меню или команду /menu")
 		}
@@ -750,32 +746,7 @@ func (b *Bot) renderNotification(n domain.Notification) string {
 	}
 }
 
-// ---------- /role (debug) ----------
-
-func (b *Bot) cmdRole(chatID int64, args []string) {
-	if len(args) < 2 {
-		b.send(chatID, "Usage: /role <coach|client|parent|admin|clear>")
-		return
-	}
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	role := domain.Role(args[1])
-	if role == "clear" {
-		delete(b.roleOverride, chatID)
-		b.send(chatID, "Role override cleared.")
-		return
-	}
-	b.roleOverride[chatID] = role
-	b.send(chatID, fmt.Sprintf("Role set to: %s", role))
-}
-
 func (b *Bot) effectiveRole(chatID int64, me *client.MeResult) domain.Role {
-	b.mu.Lock()
-	override, ok := b.roleOverride[chatID]
-	b.mu.Unlock()
-	if ok {
-		return override
-	}
 	if me != nil {
 		return me.Role
 	}
